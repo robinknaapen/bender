@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"github.com/pietjan/loom/avatar"
-	lbadge "github.com/pietjan/loom/badge"
+	"github.com/pietjan/loom/badge"
 	"github.com/pietjan/loom/icon"
 	"github.com/pietjan/loom/navlist"
 )
@@ -134,7 +134,7 @@ func sidebar(state State) templ.Component {
 							}
 							return nil
 						})
-						templ_7745c5c3_Err = lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Solid(), lbadge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Solid(), badge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -185,7 +185,7 @@ func sidebar(state State) templ.Component {
 								}
 								return nil
 							})
-							templ_7745c5c3_Err = lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Class("ml-auto")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
@@ -213,7 +213,7 @@ func sidebar(state State) templ.Component {
 								}
 								return nil
 							})
-							templ_7745c5c3_Err = lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
+							templ_7745c5c3_Err = badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Class("ml-auto")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}

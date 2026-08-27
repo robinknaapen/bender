@@ -15,6 +15,7 @@ var (
 	shell32  = windows.NewLazySystemDLL("shell32.dll")
 	ole32    = windows.NewLazySystemDLL("ole32.dll")
 	gdi32    = windows.NewLazySystemDLL("gdi32.dll")
+	dwmapi   = windows.NewLazySystemDLL("dwmapi.dll")
 
 	RegisterClassEx           = user32.NewProc("RegisterClassExW")
 	CreateWindowEx            = user32.NewProc("CreateWindowExW")
@@ -50,6 +51,7 @@ var (
 	DeleteObject              = gdi32.NewProc("DeleteObject")
 	CreateIconIndirect        = user32.NewProc("CreateIconIndirect")
 	DestroyIcon               = user32.NewProc("DestroyIcon")
+	DwmSetWindowAttribute     = dwmapi.NewProc("DwmSetWindowAttribute")
 )
 
 const (
@@ -112,6 +114,12 @@ const (
 
 	MbIconError = 0x10
 	MbOK        = 0x0
+
+	// DWMWINDOWATTRIBUTE values for titlebar styling.
+	DwmwaUseImmersiveDarkMode = 20
+	DwmwaBorderColor          = 34
+	DwmwaCaptionColor         = 35
+	DwmwaTextColor            = 36
 )
 
 // Point is the Win32 POINT.

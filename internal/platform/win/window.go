@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"unsafe"
 
+	"golang.org/x/sys/windows/registry"
+
 	"github.com/pietjan/bender/internal/platform"
 	"github.com/pietjan/bender/internal/platform/win/w32"
 )
@@ -139,7 +141,43 @@ func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) 
 	if hwnd == 0 {
 		return nil, fmt.Errorf("win: CreateWindowEx: %w", err)
 	}
+	styleTitlebar(hwnd)
 	return w, nil
+}
+
+// styleTitlebar matches the native titlebar to the app theme: in OS dark
+// mode it goes immersive-dark and is painted the sidebar's background
+// (zinc-900) with matching border and text. Attributes unsupported by
+// the OS (caption color needs Windows 11) fail silently — Windows 10
+// still gets the plain dark titlebar.
+func styleTitlebar(hwnd uintptr) {
+	if !osAppsUseDarkTheme() {
+		return
+	}
+	set := func(attr uintptr, value uint32) {
+		w32.DwmSetWindowAttribute.Call(hwnd, attr,
+			uintptr(unsafe.Pointer(&value)), unsafe.Sizeof(value))
+	}
+	set(w32.DwmwaUseImmersiveDarkMode, 1)
+	const (
+		captionBGR = 0x001b1818 // zinc-900 #18181b
+		textBGR    = 0x00f5f4f4 // zinc-100 #f4f4f5
+	)
+	set(w32.DwmwaCaptionColor, captionBGR)
+	set(w32.DwmwaBorderColor, captionBGR)
+	set(w32.DwmwaTextColor, textBGR)
+}
+
+// osAppsUseDarkTheme reads the per-user app theme choice.
+func osAppsUseDarkTheme() bool {
+	k, err := registry.OpenKey(registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE)
+	if err != nil {
+		return false
+	}
+	defer k.Close()
+	light, _, err := k.GetIntegerValue("AppsUseLightTheme")
+	return err == nil && light == 0
 }
 
 // SetBounds moves/resizes the window (outer frame, screen coordinates).

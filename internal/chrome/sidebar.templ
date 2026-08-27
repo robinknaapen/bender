@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pietjan/loom/avatar"
-	lbadge "github.com/pietjan/loom/badge"
+	"github.com/pietjan/loom/badge"
 	"github.com/pietjan/loom/icon"
 	"github.com/pietjan/loom/navlist"
 )
@@ -24,7 +24,7 @@ templ sidebar(state State) {
 							@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
 						}
 						if state.Collapsed && !item.Badge.Zero() {
-							@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Solid(), lbadge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")) {
+							@badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Solid(), badge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")) {
 								if item.Badge.Count > 0 {
 									{ badgeCount(item.Badge.Count) }
 								} else {
@@ -36,11 +36,11 @@ templ sidebar(state State) {
 					if !state.Collapsed {
 						<span class="truncate">{ item.Name }</span>
 						if item.Badge.Count > 0 {
-							@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+							@badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Class("ml-auto")) {
 								{ fmt.Sprint(item.Badge.Count) }
 							}
 						} else if item.Badge.Dot {
-							@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+							@badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Class("ml-auto")) {
 								{ "•" }
 							}
 						}
