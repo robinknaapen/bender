@@ -21,6 +21,8 @@ import (
 type State struct {
 	Items        []Item
 	SettingsOpen bool
+	// Collapsed renders the icons-only rail.
+	Collapsed bool
 }
 
 // Item is one service entry.

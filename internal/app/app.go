@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	settingGeometry = "window_geometry"
-	settingActive   = "active_service_id"
+	settingGeometry  = "window_geometry"
+	settingActive    = "active_service_id"
+	settingCollapsed = "sidebar_collapsed"
 )
 
 // App is the running application. All methods run on the UI thread.
@@ -46,6 +47,7 @@ type App struct {
 
 	settingsOpen bool
 	settingsErr  string
+	collapsed    bool
 
 	services []service.Service
 	rules    map[int64]badge.Rule
@@ -90,6 +92,9 @@ func (a *App) Run(ctx context.Context) error {
 		a.rules[svc.ID] = a.ruleFor(svc)
 	}
 	a.activeID = a.restoreActive(ctx)
+	if v, err := a.store.GetSetting(ctx, settingCollapsed); err == nil {
+		a.collapsed = v == "true"
+	}
 
 	a.win, err = a.backend.NewWindow("bender", a.restoreGeometry(ctx))
 	if err != nil {
@@ -208,7 +213,7 @@ func (a *App) applyLayout() {
 	if a.width == 0 || a.height == 0 {
 		return
 	}
-	l := ComputeLayout(a.width, a.height, a.dpi)
+	l := ComputeLayout(a.width, a.height, a.dpi, a.collapsed)
 	if a.chrome != nil {
 		a.chrome.SetBounds(l.Sidebar)
 	}
@@ -234,6 +239,17 @@ func (a *App) onChromeMessage(ctx context.Context, raw string) {
 		a.activate(ctx, m.ServiceID)
 	case bridge.OpenSettings:
 		a.openSettings(ctx)
+	case bridge.ToggleSidebar:
+		a.collapsed = !a.collapsed
+		a.applyLayout()
+		a.renderChrome()
+		v := "false"
+		if a.collapsed {
+			v = "true"
+		}
+		if err := a.store.PutSetting(ctx, store.PutSettingParams{Key: settingCollapsed, Value: v}); err != nil {
+			log.Printf("store: save sidebar state: %v", err)
+		}
 	}
 }
 
@@ -381,7 +397,7 @@ func (a *App) chromeState() chrome.State {
 			Icon:   svc.Favicon,
 		}
 	}
-	return chrome.State{Items: items, SettingsOpen: a.settingsOpen}
+	return chrome.State{Items: items, SettingsOpen: a.settingsOpen, Collapsed: a.collapsed}
 }
 
 func (a *App) ruleFor(svc service.Service) badge.Rule {

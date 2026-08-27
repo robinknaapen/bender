@@ -2,8 +2,11 @@ package app
 
 import "github.com/pietjan/bender/internal/platform"
 
-// SidebarDIP is the sidebar width in device-independent pixels.
-const SidebarDIP = 220
+// Sidebar widths in device-independent pixels.
+const (
+	SidebarDIP          = 220
+	SidebarCollapsedDIP = 56
+)
 
 // Layout places the chrome and the active service inside the client area.
 type Layout struct {
@@ -13,11 +16,15 @@ type Layout struct {
 
 // ComputeLayout splits a client area of w×h physical pixels at dpi into
 // the sidebar strip and the service content area.
-func ComputeLayout(w, h, dpi int) Layout {
+func ComputeLayout(w, h, dpi int, collapsed bool) Layout {
 	if dpi <= 0 {
 		dpi = 96
 	}
-	sw := SidebarDIP * dpi / 96
+	dip := SidebarDIP
+	if collapsed {
+		dip = SidebarCollapsedDIP
+	}
+	sw := dip * dpi / 96
 	if sw > w {
 		sw = w
 	}

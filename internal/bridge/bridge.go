@@ -36,6 +36,9 @@ type Activate struct {
 type OpenSettings struct{}
 type CloseSettings struct{}
 
+// ToggleSidebar switches the sidebar between full and icons-only width.
+type ToggleSidebar struct{}
+
 // Settings page → Go. Form-sourced fields arrive as strings (FormData).
 
 // AddService adds a service from a preset key or a custom name+URL.
@@ -124,6 +127,8 @@ func Decode(raw string) (any, error) {
 		v = &OpenSettings{}
 	case "close-settings":
 		v = &CloseSettings{}
+	case "toggle-sidebar":
+		v = &ToggleSidebar{}
 	case "svc-add":
 		v = &AddService{}
 	case "svc-remove":
@@ -161,6 +166,8 @@ func tagOf(v any) (string, error) {
 		return "open-settings", nil
 	case CloseSettings:
 		return "close-settings", nil
+	case ToggleSidebar:
+		return "toggle-sidebar", nil
 	case AddService:
 		return "svc-add", nil
 	case RemoveService:
@@ -191,6 +198,8 @@ func deref(v any) any {
 	case *OpenSettings:
 		return *m
 	case *CloseSettings:
+		return *m
+	case *ToggleSidebar:
 		return *m
 	case *AddService:
 		return *m
