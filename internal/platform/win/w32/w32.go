@@ -45,6 +45,7 @@ var (
 	GetModuleHandle           = kernel32.NewProc("GetModuleHandleW")
 	ShellNotifyIcon           = shell32.NewProc("Shell_NotifyIconW")
 	ShellExecute              = shell32.NewProc("ShellExecuteW")
+	SetAppUserModelID         = shell32.NewProc("SetCurrentProcessExplicitAppUserModelID")
 	CoInitializeEx            = ole32.NewProc("CoInitializeEx")
 	CoTaskMemFree             = ole32.NewProc("CoTaskMemFree")
 	CreateBitmap              = gdi32.NewProc("CreateBitmap")

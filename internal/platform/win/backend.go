@@ -4,6 +4,7 @@ package win
 
 import (
 	"fmt"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -38,6 +39,10 @@ type Backend struct {
 func New(userDataFolder string, debug bool) (*Backend, error) {
 	// Per-monitor-v2 DPI awareness must be set before any window exists.
 	w32.SetProcessDpiAwarenessCtx.Call(w32.DpiAwarenessContextPerMonitorAwareV2)
+	// Explicit app identity with a registered name and icon, so the
+	// shell attributes toasts to "Bender" with the app icon rather than
+	// the executable name.
+	registerIdentity(filepath.Dir(userDataFolder))
 	if r, _, _ := w32.CoInitializeEx.Call(0, w32.CoinitApartmentThreaded); int32(r) < 0 {
 		return nil, fmt.Errorf("win: CoInitializeEx failed: 0x%08x", uint32(r))
 	}
