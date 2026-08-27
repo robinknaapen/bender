@@ -7,6 +7,7 @@ package app
 // WebView2 would never show usefully. Service-worker notifications bypass
 // this; the NotificationReceived COM event can cover those later.
 const notificationShim = `(() => {
+	const Native = window.Notification;
 	const post = (title, body) =>
 		window.chrome.webview.postMessage({ type: "notify", data: { title: String(title), body: String(body || "") } });
 	class ShimNotification {
@@ -18,6 +19,10 @@ const notificationShim = `(() => {
 		addEventListener() {}
 		removeEventListener() {}
 		static requestPermission(callback) {
+			// Forward to the real API so the origin gets genuinely
+			// granted permission (auto-allowed by the host, persisted
+			// per profile) — service-worker notifications need it.
+			try { Native && Native.requestPermission().catch(() => {}); } catch (e) {}
 			if (callback) callback("granted");
 			return Promise.resolve("granted");
 		}

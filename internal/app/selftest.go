@@ -27,6 +27,11 @@ func (a *App) runSelftest(ctx context.Context) {
 		{"remove newest service", func() { a.selftestRemoveNewest(ctx) }},
 		{"remove newest service again", func() { a.selftestRemoveNewest(ctx) }},
 		{"close settings", func() { a.closeSettings() }},
+		{"fire web notification", func() {
+			if view, ok := a.views[-1]; ok {
+				view.PostJSON(`{"type":"fire-notification"}`)
+			}
+		}},
 		{"quit", func() {
 			log.Printf("selftest: PASS")
 			a.shutdown(ctx)

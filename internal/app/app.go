@@ -165,17 +165,14 @@ func (a *App) addServiceView(svc service.Service) error {
 		return err
 	}
 	id := svc.ID
-	// Native notification capture covers page and service-worker
-	// notifications alike; the script shim is the fallback for runtimes
-	// without it.
-	native := view.OnNotification(func(title, body string) {
+	// Two complementary notification paths: the shim intercepts page
+	// notifications (so they never reach WebView2's native pipeline),
+	// while NotificationReceived catches service-worker notifications
+	// the shim cannot see. No overlap, no double toasts.
+	view.OnNotification(func(title, body string) {
 		a.backend.Dispatch(func() { a.notify(id, title, body) })
 	})
-	scripts := iconResolver
-	if !native {
-		scripts = notificationShim + "\n" + iconResolver
-	}
-	view.InitScript(scripts)
+	view.InitScript(notificationShim + "\n" + iconResolver)
 	view.OnTitleChanged(func(title string) {
 		a.backend.Dispatch(func() { a.onTitle(id, title) })
 	})

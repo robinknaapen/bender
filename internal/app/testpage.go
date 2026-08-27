@@ -12,11 +12,25 @@ const testServicePage = `<!DOCTYPE html><html lang="en"><head><meta charset="utf
 	small { color: #a1a1aa; }
 </style></head><body>
 	<h1>bender test service</h1>
-	<button onclick='new Notification("bender", {body: "instant notification"})'>Notify now</button>
-	<button onclick='setTimeout(() => new Notification("bender", {body: "delayed notification"}), 5000)'>
+	<button onclick="notify('instant notification')">Notify now</button>
+	<button onclick="setTimeout(() => notify('delayed notification'), 5000)">
 		Notify in 5s <small>(switch away first)</small></button>
 	<button onclick='document.title = "(" + (Math.floor(Math.random()*98)+1) + ") Test"'>Set badge</button>
 	<button onclick='document.title = "Test"'>Clear badge</button>
 	<small>Notification.permission = <span id="p"></span></small>
-	<script>document.getElementById("p").textContent = Notification.permission + " (" + Notification.name + ")";</script>
+	<script>
+		// Like a well-behaved site: ask for permission, then notify.
+		function notify(body) {
+			Notification.requestPermission().then((perm) => {
+				show(perm);
+				new Notification("bender", { body });
+			});
+		}
+		function show(perm) { document.getElementById("p").textContent = perm + " (" + Notification.name + ")"; }
+		show(Notification.permission);
+		// Lets the selftest exercise the full web → toast path.
+		window.chrome.webview.addEventListener("message", (e) => {
+			if (e.data && e.data.type === "fire-notification") notify("selftest notification");
+		});
+	</script>
 </body></html>`

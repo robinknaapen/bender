@@ -3,6 +3,7 @@
 package webview2
 
 import (
+	"log"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -85,6 +86,7 @@ func (w *CoreWebView2) OnNotificationReceived(fn func(title, body string)) error
 	// p stays referenced for the webview's lifetime via the handler.
 	v24 := (*coreWebView2_24)(p)
 	h := newHandler(func(sender, argsPtr unsafe.Pointer) uintptr {
+		log.Printf("webview2: notification received event")
 		args := (*notificationReceivedEventArgs)(argsPtr)
 		call(args.vtbl.PutHandled, argsPtr, 1)
 		var np unsafe.Pointer
