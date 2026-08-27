@@ -3,6 +3,7 @@
 package win
 
 import (
+	"log"
 	"unsafe"
 
 	"github.com/pietjan/bender/internal/platform"
@@ -55,7 +56,10 @@ func (t *Tray) Notify(title, body string) {
 	d.DwInfoFlags = w32.NiifInfo
 	copyUTF16(d.SzInfoTitle[:], title)
 	copyUTF16(d.SzInfo[:], body)
-	w32.ShellNotifyIcon.Call(w32.NimModify, uintptr(unsafe.Pointer(d)))
+	r, _, err := w32.ShellNotifyIcon.Call(w32.NimModify, uintptr(unsafe.Pointer(d)))
+	if r == 0 {
+		log.Printf("win: tray notify failed: %v", err)
+	}
 }
 
 // OnActivate registers the click handler (icon click or balloon click).

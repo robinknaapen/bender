@@ -26,6 +26,7 @@ const (
 type App struct {
 	backend platform.Backend
 	store   *store.Store
+	debug   bool
 
 	win    platform.Window
 	chrome platform.WebView
@@ -39,11 +40,13 @@ type App struct {
 	width, height, dpi int
 }
 
-// New assembles the app. Call Run to start it.
-func New(backend platform.Backend, st *store.Store) *App {
+// New assembles the app. Call Run to start it. debug adds the built-in
+// Test service for exercising notifications and badges.
+func New(backend platform.Backend, st *store.Store, debug bool) *App {
 	return &App{
 		backend: backend,
 		store:   st,
+		debug:   debug,
 		views:   map[int64]platform.WebView{},
 		rules:   map[int64]badge.Rule{},
 		badges:  map[int64]badge.Badge{},
@@ -58,6 +61,13 @@ func (a *App) Run(ctx context.Context) error {
 	a.services, err = a.store.Services(ctx)
 	if err != nil {
 		return err
+	}
+	if a.debug {
+		// Synthetic, never persisted; an empty URL means the built-in
+		// test page. Negative ID keeps clear of database rows.
+		a.services = append(a.services, service.Service{
+			ID: -1, Name: "Test", Profile: "svc-test",
+		})
 	}
 	for _, svc := range a.services {
 		a.rules[svc.ID] = a.ruleFor(svc)
@@ -114,7 +124,11 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnTitleChanged(func(title string) { a.onTitle(id, title) })
 	view.OnMessage(func(raw string) { a.onServiceMessage(id, raw) })
 	view.SetVisible(id == a.activeID)
-	view.Navigate(svc.URL)
+	if svc.URL == "" {
+		view.NavigateHTML(testServicePage)
+	} else {
+		view.Navigate(svc.URL)
+	}
 	a.views[id] = view
 	return nil
 }
@@ -155,6 +169,7 @@ func (a *App) onServiceMessage(id int64, raw string) {
 		return
 	}
 	if n, ok := msg.(bridge.Notify); ok {
+		log.Printf("app: notify from service %d: %q", id, n.Title)
 		title := n.Title
 		if svc, ok := a.serviceByID(id); ok && title == "" {
 			title = svc.Name

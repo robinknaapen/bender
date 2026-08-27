@@ -43,7 +43,7 @@ func newWebView(w *Window, ctrl *webview2.Controller, debug bool) (*WebView, err
 			w.backend.Dispatch(func() {
 				b, err := ctrl.Bounds()
 				log.Printf("win: webview %d steady: bounds=%+v visible=%v err=%v", id, b, ctrl.IsVisible(), err)
-				core.ExecuteScript(`innerWidth+"x"+innerHeight+" "+location.href.slice(0,40)`,
+				core.ExecuteScript(`innerWidth+"x"+innerHeight+" "+location.href.slice(0,40)+" Notification="+Notification.name+"/"+Notification.permission`,
 					func(r string) { log.Printf("win: webview %d page: %s", id, r) })
 			})
 		})

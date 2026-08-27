@@ -69,5 +69,5 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	return app.New(backend, st).Run(ctx)
+	return app.New(backend, st, *debug).Run(ctx)
 }
