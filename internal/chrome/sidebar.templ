@@ -1,0 +1,41 @@
+package chrome
+
+import (
+	"fmt"
+
+	"github.com/pietjan/loom/avatar"
+	lbadge "github.com/pietjan/loom/badge"
+	"github.com/pietjan/loom/navlist"
+)
+
+// sidebar is the service switcher. Items carry data-service-id for the
+// glue script's delegated click handler; the href is inert.
+templ sidebar(state State) {
+	@navlist.New(navlist.Label("Services")) {
+		for _, item := range state.Items {
+			@navlist.Item("#", itemOptions(item)...) {
+				@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+				<span class="truncate">{ item.Name }</span>
+				if item.Badge.Count > 0 {
+					@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+						{ fmt.Sprint(item.Badge.Count) }
+					}
+				} else if item.Badge.Dot {
+					@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+						{ "•" }
+					}
+				}
+			}
+		}
+	}
+}
+
+func itemOptions(item Item) []navlist.Option {
+	options := []navlist.Option{
+		navlist.Attr("data-service-id", fmt.Sprint(item.ID)),
+	}
+	if item.Active {
+		options = append(options, navlist.Current())
+	}
+	return options
+}
