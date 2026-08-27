@@ -2,11 +2,9 @@ module github.com/pietjan/bender
 
 go 1.27.0
 
-replace github.com/pietjan/loom => ../loom
-
 require (
 	github.com/a-h/templ v0.3.1020
-	github.com/pietjan/loom v0.0.0-00010101000000-000000000000
+	github.com/pietjan/loom v0.0.0-20260802231856-03d8564d5bbf
 	github.com/wailsapp/go-webview2 v1.0.23
 	golang.org/x/image v0.45.0
 	golang.org/x/sys v0.47.0

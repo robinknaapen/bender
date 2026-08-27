@@ -96,7 +96,7 @@ func (a *App) Run(ctx context.Context) error {
 		a.collapsed = v == "true"
 	}
 
-	a.win, err = a.backend.NewWindow("bender", a.restoreGeometry(ctx))
+	a.win, err = a.backend.NewWindow("Bender", a.restoreGeometry(ctx))
 	if err != nil {
 		return err
 	}
@@ -110,9 +110,9 @@ func (a *App) Run(ctx context.Context) error {
 	})
 
 	tray := a.win.Tray()
-	tray.SetTooltip("bender")
+	tray.SetTooltip("Bender")
 	tray.SetMenu([]platform.MenuItem{
-		{Label: "Show bender", OnClick: a.win.Show},
+		{Label: "Show Bender", OnClick: a.win.Show},
 		{},
 		{Label: "Quit", OnClick: func() { a.shutdown(ctx) }},
 	})
