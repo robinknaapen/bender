@@ -1,0 +1,25 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": {
+      "0000": [
+        "icon.png",
+        "icon48.png",
+        "icon32.png",
+        "icon16.png"
+      ]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": {
+          "name": "bender",
+          "version": "0.1.0.0"
+        },
+        "description": "bender",
+        "execution-level": "as invoker",
+        "dpi-awareness": "per monitor v2"
+      }
+    }
+  }
+}

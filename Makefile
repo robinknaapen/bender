@@ -63,11 +63,12 @@ tidy:
 	cd tools && go mod tidy -v
 	go fmt ./...
 
-## generate: regenerate templ and sqlc code
+## generate: regenerate templ and sqlc code and Windows resources
 .PHONY: generate
 generate:
 	go tool $(tools) templ generate -path internal/chrome
 	go tool $(tools) sqlc generate
+	go tool $(tools) go-winres make --in cmd/bender/winres/winres.json --out cmd/bender/rsrc
 
 ## ui: rebuild the embedded chrome stylesheet (loom entry file + Tailwind)
 .PHONY: ui

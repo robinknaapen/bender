@@ -111,7 +111,7 @@ func (w *Window) notifyResize() {
 func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) {
 	hinstance, _, _ := w32.GetModuleHandle.Call(0)
 	cursor, _, _ := w32.LoadCursor.Call(0, uintptr(w32.IdcArrow))
-	icon, _, _ := w32.LoadIcon.Call(0, uintptr(w32.IdiApplication))
+	icon := appIcon()
 
 	// The class brush paints exposed client area (during resizes, before
 	// webviews cover it); match it to the theme so nothing flashes white.
@@ -151,6 +151,17 @@ func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) 
 	}
 	styleTitlebar(hwnd)
 	return w, nil
+}
+
+// appIcon loads the icon embedded as resource "APP" (winres), falling
+// back to the stock application icon when absent (go test binaries).
+func appIcon() uintptr {
+	hinstance, _, _ := w32.GetModuleHandle.Call(0)
+	if icon, _, _ := w32.LoadIcon.Call(hinstance, uintptr(unsafe.Pointer(utf16Ptr("APP")))); icon != 0 {
+		return icon
+	}
+	icon, _, _ := w32.LoadIcon.Call(0, uintptr(w32.IdiApplication))
+	return icon
 }
 
 // styleTitlebar matches the native titlebar to the app theme: in OS dark

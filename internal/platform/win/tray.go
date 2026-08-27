@@ -32,8 +32,7 @@ func newTray(w *Window) *Tray {
 	data := t.data()
 	data.UFlags = w32.NifMessage | w32.NifIcon | w32.NifTip
 	data.UCallbackMessage = wmAppTray
-	icon, _, _ := w32.LoadIcon.Call(0, uintptr(w32.IdiApplication))
-	data.HIcon = icon
+	data.HIcon = appIcon()
 	w32.ShellNotifyIcon.Call(w32.NimAdd, uintptr(unsafe.Pointer(data)))
 	data.UVersion = w32.NotifyIconVersion4
 	w32.ShellNotifyIcon.Call(w32.NimSetVersion, uintptr(unsafe.Pointer(data)))
