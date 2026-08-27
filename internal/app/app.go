@@ -36,6 +36,10 @@ type App struct {
 	rules    map[int64]badge.Rule
 	badges   map[int64]badge.Badge
 	activeID int64
+	// lastNotifyID is the service behind the pending notification. Only
+	// one balloon can pend at a time (a new one replaces it), so
+	// last-wins matches what the user actually clicks.
+	lastNotifyID int64
 
 	width, height, dpi int
 }
@@ -95,6 +99,12 @@ func (a *App) Run(ctx context.Context) error {
 		{Label: "Quit", OnClick: func() { a.shutdown(ctx) }},
 	})
 	tray.OnActivate(a.win.Show)
+	tray.OnNotificationClick(func() {
+		a.win.Show()
+		if a.lastNotifyID != 0 {
+			a.activate(ctx, a.lastNotifyID)
+		}
+	})
 
 	a.chrome, err = a.backend.NewWebView(a.win, "")
 	if err != nil {
@@ -170,6 +180,7 @@ func (a *App) onServiceMessage(id int64, raw string) {
 	}
 	if n, ok := msg.(bridge.Notify); ok {
 		log.Printf("app: notify from service %d: %q", id, n.Title)
+		a.lastNotifyID = id
 		title := n.Title
 		if svc, ok := a.serviceByID(id); ok && title == "" {
 			title = svc.Name

@@ -81,4 +81,7 @@ type Tray interface {
 	Notify(title, body string)
 	// OnActivate fires when the user clicks the tray icon.
 	OnActivate(func())
+	// OnNotificationClick fires when the user clicks a notification
+	// shown via Notify. Falls back to OnActivate when unset.
+	OnNotificationClick(func())
 }

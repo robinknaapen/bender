@@ -14,9 +14,10 @@ const trayIconID = 1
 
 // Tray is the notification-area icon, its menu, and balloon notifications.
 type Tray struct {
-	win        *Window
-	menu       []platform.MenuItem
-	onActivate func()
+	win           *Window
+	menu          []platform.MenuItem
+	onActivate    func()
+	onNotifyClick func()
 }
 
 func newTray(w *Window) *Tray {
@@ -62,16 +63,26 @@ func (t *Tray) Notify(title, body string) {
 	}
 }
 
-// OnActivate registers the click handler (icon click or balloon click).
+// OnActivate registers the icon-click handler.
 func (t *Tray) OnActivate(fn func()) { t.onActivate = fn }
+
+// OnNotificationClick registers the notification-click handler.
+func (t *Tray) OnNotificationClick(fn func()) { t.onNotifyClick = fn }
 
 // onEvent handles the tray callback message (version-4 encoding: the
 // event lives in LOWORD(lParam)).
 func (t *Tray) onEvent(event uint16) {
 	const wmContextMenu = 0x007B
 	switch event {
-	case w32.WmLButtonUp, w32.NinBalloonUserClick:
+	case w32.WmLButtonUp:
 		if t.onActivate != nil {
+			t.onActivate()
+		}
+	case w32.NinBalloonUserClick:
+		switch {
+		case t.onNotifyClick != nil:
+			t.onNotifyClick()
+		case t.onActivate != nil:
 			t.onActivate()
 		}
 	case w32.WmRButtonUp, wmContextMenu:
