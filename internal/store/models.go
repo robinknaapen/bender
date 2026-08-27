@@ -13,6 +13,7 @@ type Service struct {
 	Position   int64
 	Enabled    int64
 	BadgeRegex string
+	Favicon    []byte
 }
 
 type Setting struct {

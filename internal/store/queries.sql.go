@@ -23,7 +23,7 @@ func (q *Queries) CountServices(ctx context.Context) (int64, error) {
 const createService = `-- name: CreateService :one
 INSERT INTO services (preset, name, url, profile, position)
 VALUES (?, ?, ?, ?, ?)
-RETURNING id, preset, name, url, profile, position, enabled, badge_regex
+RETURNING id, preset, name, url, profile, position, enabled, badge_regex, favicon
 `
 
 type CreateServiceParams struct {
@@ -52,6 +52,7 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.Position,
 		&i.Enabled,
 		&i.BadgeRegex,
+		&i.Favicon,
 	)
 	return i, err
 }
@@ -77,7 +78,7 @@ func (q *Queries) GetSetting(ctx context.Context, key string) (string, error) {
 }
 
 const listAllServices = `-- name: ListAllServices :many
-SELECT id, preset, name, url, profile, position, enabled, badge_regex FROM services ORDER BY position, id
+SELECT id, preset, name, url, profile, position, enabled, badge_regex, favicon FROM services ORDER BY position, id
 `
 
 func (q *Queries) ListAllServices(ctx context.Context) ([]Service, error) {
@@ -98,6 +99,7 @@ func (q *Queries) ListAllServices(ctx context.Context) ([]Service, error) {
 			&i.Position,
 			&i.Enabled,
 			&i.BadgeRegex,
+			&i.Favicon,
 		); err != nil {
 			return nil, err
 		}
@@ -113,7 +115,7 @@ func (q *Queries) ListAllServices(ctx context.Context) ([]Service, error) {
 }
 
 const listEnabledServices = `-- name: ListEnabledServices :many
-SELECT id, preset, name, url, profile, position, enabled, badge_regex FROM services WHERE enabled = 1 ORDER BY position, id
+SELECT id, preset, name, url, profile, position, enabled, badge_regex, favicon FROM services WHERE enabled = 1 ORDER BY position, id
 `
 
 func (q *Queries) ListEnabledServices(ctx context.Context) ([]Service, error) {
@@ -134,6 +136,7 @@ func (q *Queries) ListEnabledServices(ctx context.Context) ([]Service, error) {
 			&i.Position,
 			&i.Enabled,
 			&i.BadgeRegex,
+			&i.Favicon,
 		); err != nil {
 			return nil, err
 		}
@@ -215,6 +218,20 @@ type SetServiceEnabledParams struct {
 
 func (q *Queries) SetServiceEnabled(ctx context.Context, arg SetServiceEnabledParams) error {
 	_, err := q.db.ExecContext(ctx, setServiceEnabled, arg.Enabled, arg.ID)
+	return err
+}
+
+const setServiceFavicon = `-- name: SetServiceFavicon :exec
+UPDATE services SET favicon = ? WHERE id = ?
+`
+
+type SetServiceFaviconParams struct {
+	Favicon []byte
+	ID      int64
+}
+
+func (q *Queries) SetServiceFavicon(ctx context.Context, arg SetServiceFaviconParams) error {
+	_, err := q.db.ExecContext(ctx, setServiceFavicon, arg.Favicon, arg.ID)
 	return err
 }
 

@@ -16,7 +16,11 @@ templ sidebar(state State) {
 		@navlist.New(navlist.Label("Services")) {
 			for _, item := range state.Items {
 				@navlist.Item("#", itemOptions(item)...) {
-					@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+					if len(item.Icon) > 0 {
+						<img src={ iconURI(item.Icon) } alt="" class="size-6 shrink-0 rounded"/>
+					} else {
+						@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+					}
 					<span class="truncate">{ item.Name }</span>
 					if item.Badge.Count > 0 {
 						@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {

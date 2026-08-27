@@ -138,6 +138,7 @@ func (s *Store) Services(ctx context.Context) ([]service.Service, error) {
 			URL:        r.Url,
 			Profile:    r.Profile,
 			BadgeRegex: r.BadgeRegex,
+			Favicon:    r.Favicon,
 		}
 	}
 	return out, nil

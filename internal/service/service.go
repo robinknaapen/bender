@@ -18,6 +18,8 @@ type Service struct {
 	// BadgeRegex, when non-empty, overrides the preset badge rule; its
 	// first capture group is the unread count.
 	BadgeRegex string
+	// Favicon is the last PNG favicon the service's page reported.
+	Favicon []byte
 }
 
 // Preset is a built-in service definition.

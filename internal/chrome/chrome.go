@@ -6,6 +6,7 @@ package chrome
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 
@@ -27,6 +28,13 @@ type Item struct {
 	Name   string
 	Active bool
 	Badge  badge.Badge
+	// Icon is the service's favicon as PNG bytes; initials otherwise.
+	Icon []byte
+}
+
+// iconURI packs PNG bytes into a data URI for an <img> src.
+func iconURI(png []byte) string {
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 }
 
 // SettingsState is everything the settings page shows.

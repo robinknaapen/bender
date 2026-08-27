@@ -7,7 +7,8 @@ CREATE TABLE services (
     profile     TEXT    NOT NULL UNIQUE,
     position    INTEGER NOT NULL,
     enabled     INTEGER NOT NULL DEFAULT 1,
-    badge_regex TEXT    NOT NULL DEFAULT ''
+    badge_regex TEXT    NOT NULL DEFAULT '',
+    favicon     BLOB    NOT NULL DEFAULT x''
 );
 
 CREATE TABLE settings (

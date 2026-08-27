@@ -112,6 +112,13 @@ func (v *WebView) OnTitleChanged(fn func(title string)) {
 	}
 }
 
+func (v *WebView) OnFaviconChanged(fn func(png []byte)) {
+	if err := v.core.OnFaviconChanged(fn); err != nil {
+		// Pre-2023 runtime: icons degrade to initials, nothing broken.
+		log.Printf("win: favicons unavailable: %v", err)
+	}
+}
+
 func (v *WebView) SetBounds(r platform.Rect) {
 	if v.closed {
 		return

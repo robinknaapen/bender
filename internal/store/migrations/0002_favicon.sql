@@ -1,0 +1,1 @@
+ALTER TABLE services ADD COLUMN favicon BLOB NOT NULL DEFAULT x'';

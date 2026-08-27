@@ -66,6 +66,9 @@ type WebView interface {
 	PostJSON(json string)
 	OnMessage(func(json string))
 	OnTitleChanged(func(title string))
+	// OnFaviconChanged delivers the page's favicon as PNG bytes whenever
+	// it changes. Backends without favicon support may never call it.
+	OnFaviconChanged(func(png []byte))
 	SetBounds(Rect)
 	SetVisible(bool)
 	Focus()

@@ -5,6 +5,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -163,6 +164,9 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnMessage(func(raw string) {
 		a.backend.Dispatch(func() { a.onServiceMessage(id, raw) })
 	})
+	view.OnFaviconChanged(func(png []byte) {
+		a.backend.Dispatch(func() { a.onFavicon(id, png) })
+	})
 	view.SetVisible(id == a.activeID && !a.settingsOpen)
 	if svc.URL == "" {
 		view.NavigateHTML(testServicePage)
@@ -225,6 +229,24 @@ func (a *App) onServiceMessage(id int64, raw string) {
 	}
 }
 
+// onFavicon stores a changed service favicon and refreshes the sidebar.
+func (a *App) onFavicon(id int64, png []byte) {
+	for i := range a.services {
+		if a.services[i].ID != id || bytes.Equal(a.services[i].Favicon, png) {
+			continue
+		}
+		a.services[i].Favicon = png
+		if id > 0 { // synthetic services (test) are not persisted
+			ctx := context.Background()
+			if err := a.store.SetServiceFavicon(ctx, store.SetServiceFaviconParams{Favicon: png, ID: id}); err != nil {
+				log.Printf("store: save favicon: %v", err)
+			}
+		}
+		a.renderChrome()
+		return
+	}
+}
+
 func (a *App) onTitle(id int64, title string) {
 	rule, ok := a.rules[id]
 	if !ok {
@@ -281,6 +303,7 @@ func (a *App) chromeState() chrome.State {
 			Name:   svc.Name,
 			Active: svc.ID == a.activeID && !a.settingsOpen,
 			Badge:  a.badges[svc.ID],
+			Icon:   svc.Favicon,
 		}
 	}
 	return chrome.State{Items: items, SettingsOpen: a.settingsOpen}

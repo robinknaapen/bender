@@ -18,6 +18,9 @@ DELETE FROM services WHERE id = ?;
 -- name: SetServiceBadgeRegex :exec
 UPDATE services SET badge_regex = ? WHERE id = ?;
 
+-- name: SetServiceFavicon :exec
+UPDATE services SET favicon = ? WHERE id = ?;
+
 -- name: ListProfiles :many
 SELECT profile FROM services;
 
