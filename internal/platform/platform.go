@@ -35,6 +35,8 @@ type Backend interface {
 	Run() error
 	// Dispatch schedules f on the UI thread. Safe from any goroutine.
 	Dispatch(f func())
+	// OpenURL opens url in the user's default browser.
+	OpenURL(url string)
 	// Quit ends the event loop and releases native resources.
 	Quit()
 }
@@ -71,6 +73,11 @@ type WebView interface {
 	// OnFaviconChanged delivers the page's favicon as PNG bytes whenever
 	// it changes. Backends without favicon support may never call it.
 	OnFaviconChanged(func(png []byte))
+	// OnNewWindow consults fn for every popup the page opens. Returning
+	// true (the URL was handled elsewhere) suppresses the popup; false
+	// lets the backend open its default popup window. fn must decide
+	// synchronously.
+	OnNewWindow(func(url string) bool)
 	// OnNotification subscribes to web notifications raised by the page —
 	// service workers included — and reports whether the backend supports
 	// that. When it returns false, the caller must provide its own

@@ -119,6 +119,12 @@ func (v *WebView) OnFaviconChanged(fn func(png []byte)) {
 	}
 }
 
+func (v *WebView) OnNewWindow(fn func(url string) bool) {
+	if err := v.core.OnNewWindowRequested(fn); err != nil {
+		log.Printf("win: %v", err)
+	}
+}
+
 func (v *WebView) OnNotification(fn func(title, body string)) bool {
 	if err := v.core.OnNotificationReceived(fn); err != nil {
 		// Pre-2024 runtime: the caller falls back to the script shim.

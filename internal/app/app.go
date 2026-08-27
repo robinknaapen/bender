@@ -179,6 +179,17 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnFaviconChanged(func(png []byte) {
 		a.backend.Dispatch(func() { a.onFavicon(id, png) })
 	})
+	// Ordinary links leave for the default browser; same-site and OAuth
+	// popups keep WebView2's default window (same profile, so logins
+	// work). The decision must be synchronous — no Dispatch here.
+	serviceURL := svc.URL
+	view.OnNewWindow(func(url string) bool {
+		if !openExternally(serviceURL, url) {
+			return false
+		}
+		a.backend.OpenURL(url)
+		return true
+	})
 	visible := id == a.activeID && !a.settingsOpen
 	view.SetVisible(visible)
 	view.SetMemoryTargetLow(!visible)

@@ -17,6 +17,7 @@ const testServicePage = `<!DOCTYPE html><html lang="en"><head><meta charset="utf
 		Notify in 5s <small>(switch away first)</small></button>
 	<button onclick='document.title = "(" + (Math.floor(Math.random()*98)+1) + ") Test"'>Set badge</button>
 	<button onclick='document.title = "Test"'>Clear badge</button>
+	<button onclick='window.open("https://example.com")'>Open external link <small>(should hit your browser)</small></button>
 	<small>Notification.permission = <span id="p"></span></small>
 	<script>
 		// Like a well-behaved site: ask for permission, then notify.

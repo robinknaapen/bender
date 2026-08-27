@@ -164,6 +164,13 @@ func (b *Backend) drainDispatch() {
 	}
 }
 
+// OpenURL opens url in the user's default browser.
+func (b *Backend) OpenURL(url string) {
+	w32.ShellExecute.Call(0,
+		uintptr(unsafe.Pointer(utf16Ptr("open"))),
+		uintptr(unsafe.Pointer(utf16Ptr(url))), 0, 0, w32.SwShowNormal)
+}
+
 // Quit removes the tray icon and ends the message loop.
 func (b *Backend) Quit() {
 	if b.main != nil && b.main.tray != nil {

@@ -123,6 +123,22 @@ type navigationCompletedEventArgsVtbl struct {
 	GetNavigationID   uintptr
 }
 
+type newWindowRequestedEventArgs struct {
+	vtbl *newWindowRequestedEventArgsVtbl
+}
+
+type newWindowRequestedEventArgsVtbl struct {
+	iUnknownVtbl
+	GetUri             uintptr
+	PutNewWindow       uintptr
+	GetNewWindow       uintptr
+	PutHandled         uintptr
+	GetHandled         uintptr
+	GetIsUserInitiated uintptr
+	GetDeferral        uintptr
+	GetWindowFeatures  uintptr
+}
+
 type permissionRequestedEventArgs struct {
 	vtbl *permissionRequestedEventArgsVtbl
 }
@@ -249,6 +265,26 @@ func (w *CoreWebView2) ExecuteScript(js string, fn func(resultJSON string)) erro
 	hr := call(w.vtbl.ExecuteScript, unsafe.Pointer(w),
 		uintptr(unsafe.Pointer(utf16Ptr(js))), h.ptr())
 	return checkHR("ExecuteScript", hr)
+}
+
+// OnNewWindowRequested consults fn for every window.open/target=_blank.
+// When fn returns true (it opened the URL elsewhere), the popup is
+// suppressed; false keeps WebView2's default popup (OAuth flows).
+func (w *CoreWebView2) OnNewWindowRequested(fn func(uri string) bool) error {
+	h := newHandler(func(sender, args unsafe.Pointer) uintptr {
+		a := (*newWindowRequestedEventArgs)(args)
+		var p *uint16
+		if call(a.vtbl.GetUri, args, uintptr(unsafe.Pointer(&p))) != 0 {
+			return 0
+		}
+		if fn(takeCoTaskString(p)) {
+			call(a.vtbl.PutHandled, args, 1)
+		}
+		return 0
+	})
+	var token int64
+	hr := call(w.vtbl.AddNewWindowRequested, unsafe.Pointer(w), h.ptr(), uintptr(unsafe.Pointer(&token)))
+	return checkHR("add_NewWindowRequested", hr)
 }
 
 // AutoGrantNotifications answers notification permission prompts with
