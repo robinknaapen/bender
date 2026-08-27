@@ -12,7 +12,7 @@ import (
 // sidebar is the service switcher. Items carry their bridge message in
 // data-msg for the glue script's delegated click handler; hrefs are inert.
 templ sidebar(state State) {
-	<div class="flex h-screen flex-col justify-between">
+	<div class="flex h-full flex-col justify-between">
 		@navlist.New(navlist.Label("Services")) {
 			for _, item := range state.Items {
 				@navlist.Item("#", itemOptions(item)...) {
