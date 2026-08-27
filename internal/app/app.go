@@ -7,8 +7,12 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"strings"
 
@@ -161,7 +165,17 @@ func (a *App) addServiceView(svc service.Service) error {
 		return err
 	}
 	id := svc.ID
-	view.InitScript(notificationShim)
+	// Native notification capture covers page and service-worker
+	// notifications alike; the script shim is the fallback for runtimes
+	// without it.
+	native := view.OnNotification(func(title, body string) {
+		a.backend.Dispatch(func() { a.notify(id, title, body) })
+	})
+	scripts := iconResolver
+	if !native {
+		scripts = notificationShim + "\n" + iconResolver
+	}
+	view.InitScript(scripts)
 	view.OnTitleChanged(func(title string) {
 		a.backend.Dispatch(func() { a.onTitle(id, title) })
 	})
@@ -171,7 +185,9 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnFaviconChanged(func(png []byte) {
 		a.backend.Dispatch(func() { a.onFavicon(id, png) })
 	})
-	view.SetVisible(id == a.activeID && !a.settingsOpen)
+	visible := id == a.activeID && !a.settingsOpen
+	view.SetVisible(visible)
+	view.SetMemoryTargetLow(!visible)
 	if svc.URL == "" {
 		view.NavigateHTML(testServicePage)
 	} else {
@@ -224,13 +240,7 @@ func (a *App) onServiceMessage(id int64, raw string) {
 	}
 	switch m := msg.(type) {
 	case bridge.Notify:
-		log.Printf("app: notify from service %d: %q", id, m.Title)
-		a.lastNotifyID = id
-		title := m.Title
-		if svc, ok := a.serviceByID(id); ok && title == "" {
-			title = svc.Name
-		}
-		a.win.Tray().Notify(title, m.Body)
+		a.notify(id, m.Title, m.Body)
 	case bridge.Icon:
 		const maxIcon = 512 * 1024
 		if !strings.HasPrefix(m.URI, "data:image/") || len(m.URI) > maxIcon {
@@ -240,6 +250,42 @@ func (a *App) onServiceMessage(id int64, raw string) {
 		a.shimIcon[id] = true
 		a.saveIcon(id, []byte(m.URI))
 	}
+}
+
+// notify raises a native notification for a service, with its icon.
+func (a *App) notify(id int64, title, body string) {
+	log.Printf("app: notify from service %d: %q", id, title)
+	a.lastNotifyID = id
+	var icon image.Image
+	if svc, ok := a.serviceByID(id); ok {
+		if title == "" {
+			title = svc.Name
+		}
+		icon = decodeIcon(svc.Favicon)
+	}
+	a.win.Tray().Notify(title, body, icon)
+}
+
+// decodeIcon turns a stored service icon (raw PNG, or a data URI from
+// the in-page resolver) into an image; nil when it doesn't decode.
+func decodeIcon(stored []byte) image.Image {
+	raw := stored
+	if bytes.HasPrefix(stored, []byte("data:")) {
+		_, b64, ok := bytes.Cut(stored, []byte(";base64,"))
+		if !ok {
+			return nil
+		}
+		decoded, err := base64.StdEncoding.AppendDecode(nil, b64)
+		if err != nil {
+			return nil
+		}
+		raw = decoded
+	}
+	img, _, err := image.Decode(bytes.NewReader(raw))
+	if err != nil {
+		return nil
+	}
+	return img
 }
 
 // onFavicon handles WebView2's own favicon event — the 16px fallback,
@@ -288,9 +334,11 @@ func (a *App) activate(ctx context.Context, id int64) {
 	}
 	if prev, ok := a.views[a.activeID]; ok {
 		prev.SetVisible(false)
+		prev.SetMemoryTargetLow(true)
 	}
 	a.activeID = id
 	view := a.views[id]
+	view.SetMemoryTargetLow(false)
 	view.SetVisible(true)
 	view.Focus()
 	a.renderChrome()
@@ -358,7 +406,9 @@ func (a *App) openSettings(ctx context.Context) {
 	}
 	if active, ok := a.views[a.activeID]; ok {
 		active.SetVisible(false)
+		active.SetMemoryTargetLow(true)
 	}
+	a.settings.Resume()
 	a.settings.SetVisible(true)
 	a.settings.Focus()
 	a.settingsOpen = true
@@ -372,7 +422,10 @@ func (a *App) closeSettings() {
 		return
 	}
 	a.settings.SetVisible(false)
+	// Nothing runs in the background of the settings page; sleep it.
+	a.settings.Suspend()
 	if active, ok := a.views[a.activeID]; ok {
+		active.SetMemoryTargetLow(false)
 		active.SetVisible(true)
 		active.Focus()
 	}

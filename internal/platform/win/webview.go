@@ -119,6 +119,42 @@ func (v *WebView) OnFaviconChanged(fn func(png []byte)) {
 	}
 }
 
+func (v *WebView) OnNotification(fn func(title, body string)) bool {
+	if err := v.core.OnNotificationReceived(fn); err != nil {
+		// Pre-2024 runtime: the caller falls back to the script shim.
+		log.Printf("win: native notifications unavailable: %v", err)
+		return false
+	}
+	return true
+}
+
+func (v *WebView) SetMemoryTargetLow(low bool) {
+	if v.closed {
+		return
+	}
+	if err := v.core.SetMemoryTargetLow(low); err != nil {
+		log.Printf("win: memory target: %v", err)
+	}
+}
+
+func (v *WebView) Suspend() {
+	if v.closed {
+		return
+	}
+	if err := v.core.TrySuspend(); err != nil {
+		log.Printf("win: suspend: %v", err)
+	}
+}
+
+func (v *WebView) Resume() {
+	if v.closed {
+		return
+	}
+	if err := v.core.Resume(); err != nil {
+		log.Printf("win: resume: %v", err)
+	}
+}
+
 func (v *WebView) SetBounds(r platform.Rect) {
 	if v.closed {
 		return

@@ -5,6 +5,8 @@
 // platform-specific code.
 package platform
 
+import "image"
+
 // Rect is a rectangle in physical pixels, relative to the window's client
 // area origin.
 type Rect struct {
@@ -69,6 +71,18 @@ type WebView interface {
 	// OnFaviconChanged delivers the page's favicon as PNG bytes whenever
 	// it changes. Backends without favicon support may never call it.
 	OnFaviconChanged(func(png []byte))
+	// OnNotification subscribes to web notifications raised by the page —
+	// service workers included — and reports whether the backend supports
+	// that. When it returns false, the caller must provide its own
+	// notification capture (script shim).
+	OnNotification(func(title, body string)) bool
+	// SetMemoryTargetLow trims the view's memory when hidden; script
+	// keeps running. Best-effort.
+	SetMemoryTargetLow(low bool)
+	// Suspend stops the view entirely (script included) until Resume.
+	// Only for views with no background duties. Best-effort.
+	Suspend()
+	Resume()
 	SetBounds(Rect)
 	SetVisible(bool)
 	Focus()
@@ -80,8 +94,9 @@ type WebView interface {
 type Tray interface {
 	SetTooltip(string)
 	SetMenu([]MenuItem)
-	// Notify shows a desktop notification attributed to the app.
-	Notify(title, body string)
+	// Notify shows a desktop notification attributed to the app. icon,
+	// when non-nil, is shown in place of the app icon.
+	Notify(title, body string, icon image.Image)
 	// OnActivate fires when the user clicks the tray icon.
 	OnActivate(func())
 	// OnNotificationClick fires when the user clicks a notification

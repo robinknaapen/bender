@@ -14,6 +14,7 @@ var (
 	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
 	shell32  = windows.NewLazySystemDLL("shell32.dll")
 	ole32    = windows.NewLazySystemDLL("ole32.dll")
+	gdi32    = windows.NewLazySystemDLL("gdi32.dll")
 
 	RegisterClassEx           = user32.NewProc("RegisterClassExW")
 	CreateWindowEx            = user32.NewProc("CreateWindowExW")
@@ -45,6 +46,10 @@ var (
 	ShellExecute              = shell32.NewProc("ShellExecuteW")
 	CoInitializeEx            = ole32.NewProc("CoInitializeEx")
 	CoTaskMemFree             = ole32.NewProc("CoTaskMemFree")
+	CreateBitmap              = gdi32.NewProc("CreateBitmap")
+	DeleteObject              = gdi32.NewProc("DeleteObject")
+	CreateIconIndirect        = user32.NewProc("CreateIconIndirect")
+	DestroyIcon               = user32.NewProc("DestroyIcon")
 )
 
 const (
@@ -96,7 +101,9 @@ const (
 	NifTip     = 0x04
 	NifInfo    = 0x10
 
-	NiifInfo = 0x01
+	NiifInfo      = 0x01
+	NiifUser      = 0x04
+	NiifLargeIcon = 0x20
 
 	NotifyIconVersion4 = 4
 
@@ -161,6 +168,15 @@ type NotifyIconData struct {
 	DwInfoFlags      uint32
 	GuidItem         windows.GUID
 	HBalloonIcon     uintptr
+}
+
+// IconInfo is the Win32 ICONINFO.
+type IconInfo struct {
+	FIcon    int32
+	XHotspot uint32
+	YHotspot uint32
+	HbmMask  uintptr
+	HbmColor uintptr
 }
 
 // Loword extracts the low 16 bits.

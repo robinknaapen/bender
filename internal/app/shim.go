@@ -25,9 +25,10 @@ const notificationShim = `(() => {
 	Object.defineProperty(ShimNotification, "permission", { get: () => "granted" });
 	Object.defineProperty(ShimNotification, "maxActions", { get: () => 0 });
 	window.Notification = ShimNotification;
-})();
+})();`
 
-/* Icon resolution: pick the page's best static icon and post it as a
+// iconResolver is injected into every service webview.
+const iconResolver = `/* Icon resolution: pick the page's best static icon and post it as a
    data URI. apple-touch-icon is preferred (large, and never the badged
    canvas favicon some services swap in — those are data: URIs, which
    are skipped). WebView2's own favicon event stays as the fallback. */

@@ -3,6 +3,7 @@
 package win
 
 import (
+	"image"
 	"log"
 	"unsafe"
 
@@ -50,17 +51,71 @@ func (t *Tray) SetTooltip(tip string) {
 // SetMenu sets the right-click menu.
 func (t *Tray) SetMenu(items []platform.MenuItem) { t.menu = items }
 
-// Notify shows a balloon notification (a native toast on Windows 10/11).
-func (t *Tray) Notify(title, body string) {
+// Notify shows a balloon notification (a native toast on Windows 10/11),
+// with the given image as its icon when one decodes.
+func (t *Tray) Notify(title, body string, icon image.Image) {
 	d := t.data()
 	d.UFlags = w32.NifInfo
 	d.DwInfoFlags = w32.NiifInfo
 	copyUTF16(d.SzInfoTitle[:], title)
 	copyUTF16(d.SzInfo[:], body)
+	var hicon uintptr
+	if icon != nil {
+		if hicon = iconFromImage(icon); hicon != 0 {
+			d.DwInfoFlags = w32.NiifUser | w32.NiifLargeIcon
+			d.HBalloonIcon = hicon
+		}
+	}
 	r, _, err := w32.ShellNotifyIcon.Call(w32.NimModify, uintptr(unsafe.Pointer(d)))
 	if r == 0 {
 		log.Printf("win: tray notify failed: %v", err)
 	}
+	if hicon != 0 {
+		// The shell copies the icon during the call.
+		w32.DestroyIcon.Call(hicon)
+	}
+}
+
+// notifyIconSize is the balloon icon edge in pixels (SM_CXICON-ish).
+const notifyIconSize = 32
+
+// iconFromImage converts an image to a 32bpp ARGB HICON, scaled with
+// nearest-neighbour to notifyIconSize. Returns 0 on failure.
+func iconFromImage(src image.Image) uintptr {
+	const n = notifyIconSize
+	b := src.Bounds()
+	if b.Dx() == 0 || b.Dy() == 0 {
+		return 0
+	}
+	// BGRA, premultiplied, top-down — what CreateBitmap expects for a
+	// 32bpp DDB used as an alpha icon.
+	bits := make([]byte, n*n*4)
+	for y := range n {
+		sy := b.Min.Y + y*b.Dy()/n
+		for x := range n {
+			sx := b.Min.X + x*b.Dx()/n
+			r, g, bl, a := src.At(sx, sy).RGBA() // premultiplied 16-bit
+			i := (y*n + x) * 4
+			bits[i+0] = byte(bl >> 8)
+			bits[i+1] = byte(g >> 8)
+			bits[i+2] = byte(r >> 8)
+			bits[i+3] = byte(a >> 8)
+		}
+	}
+	color, _, _ := w32.CreateBitmap.Call(n, n, 1, 32, uintptr(unsafe.Pointer(&bits[0])))
+	if color == 0 {
+		return 0
+	}
+	defer w32.DeleteObject.Call(color)
+	mask := make([]byte, n*n/8)
+	mono, _, _ := w32.CreateBitmap.Call(n, n, 1, 1, uintptr(unsafe.Pointer(&mask[0])))
+	if mono == 0 {
+		return 0
+	}
+	defer w32.DeleteObject.Call(mono)
+	info := w32.IconInfo{FIcon: 1, HbmMask: mono, HbmColor: color}
+	hicon, _, _ := w32.CreateIconIndirect.Call(uintptr(unsafe.Pointer(&info)))
+	return hicon
 }
 
 // OnActivate registers the icon-click handler.
