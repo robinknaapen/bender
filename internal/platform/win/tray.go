@@ -7,6 +7,8 @@ import (
 	"log"
 	"unsafe"
 
+	xdraw "golang.org/x/image/draw"
+
 	"github.com/pietjan/bender/internal/platform"
 	"github.com/pietjan/bender/internal/platform/win/w32"
 )
@@ -80,31 +82,28 @@ func (t *Tray) Notify(title, body string, icon image.Image) {
 	t.balloonIcon = hicon
 }
 
-// notifyIconSize is the balloon icon edge in pixels (SM_CXICON-ish).
-const notifyIconSize = 32
+// notifyIconSize is the balloon icon edge in pixels — generous, since
+// toasts render it at ~48 logical pixels and the shell downscales well.
+const notifyIconSize = 64
 
-// iconFromImage converts an image to a 32bpp ARGB HICON, scaled with
-// nearest-neighbour to notifyIconSize. Returns 0 on failure.
+// iconFromImage converts an image to a 32bpp ARGB HICON, resampled to
+// notifyIconSize. Returns 0 on failure.
 func iconFromImage(src image.Image) uintptr {
 	const n = notifyIconSize
 	b := src.Bounds()
 	if b.Dx() == 0 || b.Dy() == 0 {
 		return 0
 	}
+	scaled := image.NewRGBA(image.Rect(0, 0, n, n))
+	xdraw.CatmullRom.Scale(scaled, scaled.Bounds(), src, b, xdraw.Over, nil)
 	// BGRA, premultiplied, top-down — what CreateBitmap expects for a
-	// 32bpp DDB used as an alpha icon.
+	// 32bpp DDB used as an alpha icon. image.RGBA is premultiplied.
 	bits := make([]byte, n*n*4)
-	for y := range n {
-		sy := b.Min.Y + y*b.Dy()/n
-		for x := range n {
-			sx := b.Min.X + x*b.Dx()/n
-			r, g, bl, a := src.At(sx, sy).RGBA() // premultiplied 16-bit
-			i := (y*n + x) * 4
-			bits[i+0] = byte(bl >> 8)
-			bits[i+1] = byte(g >> 8)
-			bits[i+2] = byte(r >> 8)
-			bits[i+3] = byte(a >> 8)
-		}
+	for i := 0; i < n*n; i++ {
+		bits[i*4+0] = scaled.Pix[i*4+2]
+		bits[i*4+1] = scaled.Pix[i*4+1]
+		bits[i*4+2] = scaled.Pix[i*4+0]
+		bits[i*4+3] = scaled.Pix[i*4+3]
 	}
 	color, _, _ := w32.CreateBitmap.Call(n, n, 1, 32, uintptr(unsafe.Pointer(&bits[0])))
 	if color == 0 {
