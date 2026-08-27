@@ -1,0 +1,28 @@
+name: audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      # go.mod replaces github.com/pietjan/loom with ../loom, so the two
+      # repositories are checked out side by side.
+      - uses: actions/checkout@v4
+        with:
+          path: bender
+      - uses: actions/checkout@v4
+        with:
+          repository: Pietjan/loom
+          path: loom
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bender/go.mod
+          cache-dependency-path: |
+            bender/go.sum
+            bender/tools/go.sum
+      - run: make audit
+        working-directory: bender
