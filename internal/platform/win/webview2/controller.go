@@ -3,6 +3,8 @@
 package webview2
 
 import (
+	"golang.org/x/sys/windows"
+
 	"unsafe"
 
 	"github.com/pietjan/bender/internal/platform/win/w32"
@@ -43,6 +45,36 @@ type controllerVtbl struct {
 
 // moveFocusReasonProgrammatic is COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC.
 const moveFocusReasonProgrammatic = 0
+
+// IID_ICoreWebView2Controller2, from WebView2.h (default background color).
+var iidController2 = windows.GUID{
+	Data1: 0xc979903e, Data2: 0xd4ca, Data3: 0x4228,
+	Data4: [8]byte{0x92, 0xeb, 0x47, 0xee, 0x3f, 0xa9, 0x6e, 0xab},
+}
+
+type controller2 struct {
+	vtbl *controller2Vtbl
+}
+
+type controller2Vtbl struct {
+	controllerVtbl
+	GetDefaultBackgroundColor uintptr
+	PutDefaultBackgroundColor uintptr
+}
+
+// SetDefaultBackgroundColor paints the webview's backdrop — what shows
+// before a page paints — instead of the default white.
+func (c *Controller) SetDefaultBackgroundColor(r, g, b byte) error {
+	p, err := queryInterface(unsafe.Pointer(c), &iidController2)
+	if err != nil {
+		return err
+	}
+	defer release(p)
+	c2 := (*controller2)(p)
+	// COREWEBVIEW2_COLOR {A,R,G,B} is 4 bytes, passed by value.
+	color := uintptr(0xff) | uintptr(r)<<8 | uintptr(g)<<16 | uintptr(b)<<24
+	return checkHR("put_DefaultBackgroundColor", call(c2.vtbl.PutDefaultBackgroundColor, p, color))
+}
 
 // SetBounds positions the webview within its parent's client area.
 // (Win64 passes >8-byte structs by reference, hence the pointer.)

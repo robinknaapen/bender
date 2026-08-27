@@ -33,6 +33,12 @@ func newWebView(w *Window, ctrl *webview2.Controller, debug bool) (*WebView, err
 	if err := ctrl.SetVisible(true); err != nil {
 		return nil, err
 	}
+	// Backdrop matching the theme, so loads and switches never flash white.
+	if osAppsUseDarkTheme() {
+		if err := ctrl.SetDefaultBackgroundColor(0x18, 0x18, 0x1b); err != nil { // zinc-900
+			log.Printf("win: %v", err)
+		}
+	}
 	if err := core.ConfigureSettings(debug); err != nil {
 		return nil, err
 	}

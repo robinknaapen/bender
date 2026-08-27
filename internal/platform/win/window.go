@@ -113,13 +113,21 @@ func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) 
 	cursor, _, _ := w32.LoadCursor.Call(0, uintptr(w32.IdcArrow))
 	icon, _, _ := w32.LoadIcon.Call(0, uintptr(w32.IdiApplication))
 
+	// The class brush paints exposed client area (during resizes, before
+	// webviews cover it); match it to the theme so nothing flashes white.
+	background := uintptr(w32.ColorWindow + 1)
+	if osAppsUseDarkTheme() {
+		if brush, _, _ := w32.CreateSolidBrush.Call(0x001b1818); brush != 0 { // zinc-900, BGR
+			background = brush
+		}
+	}
 	cls := w32.WndClassEx{
 		Style:         0,
 		LpfnWndProc:   wndProcCallback,
 		HInstance:     hinstance,
 		HIcon:         icon,
 		HCursor:       cursor,
-		HbrBackground: w32.ColorWindow + 1,
+		HbrBackground: background,
 		LpszClassName: utf16Ptr(className),
 	}
 	cls.CbSize = uint32(unsafe.Sizeof(cls))

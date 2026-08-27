@@ -48,6 +48,7 @@ var (
 	CoInitializeEx            = ole32.NewProc("CoInitializeEx")
 	CoTaskMemFree             = ole32.NewProc("CoTaskMemFree")
 	CreateBitmap              = gdi32.NewProc("CreateBitmap")
+	CreateSolidBrush          = gdi32.NewProc("CreateSolidBrush")
 	DeleteObject              = gdi32.NewProc("DeleteObject")
 	CreateIconIndirect        = user32.NewProc("CreateIconIndirect")
 	DestroyIcon               = user32.NewProc("DestroyIcon")
