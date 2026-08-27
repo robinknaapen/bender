@@ -11,8 +11,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+
+	_ "golang.org/x/image/webp"
 	"log"
 	"strings"
 
@@ -82,13 +85,7 @@ func (a *App) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if a.debug {
-		// Synthetic, never persisted; an empty URL means the built-in
-		// test page. Negative ID keeps clear of database rows.
-		a.services = append(a.services, service.Service{
-			ID: -1, Name: "Test", Profile: "svc-test",
-		})
-	}
+	a.services = a.withTestService(a.services)
 	for _, svc := range a.services {
 		a.rules[svc.ID] = a.ruleFor(svc)
 	}
@@ -259,6 +256,7 @@ func (a *App) notify(id int64, title, body string) {
 			title = svc.Name
 		}
 		icon = decodeIcon(svc.Favicon)
+		log.Printf("app: notify icon: stored=%d decoded=%v head=%.30q", len(svc.Favicon), icon != nil, svc.Favicon)
 	}
 	a.win.Tray().Notify(title, body, icon)
 }
@@ -576,10 +574,7 @@ func (a *App) reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if a.debug {
-		services = append(services, service.Service{ID: -1, Name: "Test", Profile: "svc-test"})
-	}
-	a.services = services
+	a.services = a.withTestService(services)
 
 	current := map[int64]service.Service{}
 	for _, svc := range a.services {
@@ -653,6 +648,24 @@ func (a *App) settingsState(ctx context.Context) (chrome.SettingsState, error) {
 		presets[i] = chrome.SettingsPreset{Key: p.Key, Name: p.Name}
 	}
 	return chrome.SettingsState{Items: items, Presets: presets, Error: a.settingsErr}, nil
+}
+
+// withTestService appends the debug-only Test service: synthetic, never
+// persisted; an empty URL means the built-in test page, and the negative
+// ID keeps clear of database rows. It borrows a stored icon so test
+// notifications exercise the icon path.
+func (a *App) withTestService(services []service.Service) []service.Service {
+	if !a.debug {
+		return services
+	}
+	test := service.Service{ID: -1, Name: "Test", Profile: "svc-test"}
+	for _, svc := range services {
+		if len(svc.Favicon) > 0 {
+			test.Favicon = svc.Favicon
+			break
+		}
+	}
+	return append(services, test)
 }
 
 // restoreActive picks the service to show first: the persisted one when it

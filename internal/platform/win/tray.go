@@ -61,7 +61,9 @@ func (t *Tray) Notify(title, body string, icon image.Image) {
 	copyUTF16(d.SzInfo[:], body)
 	var hicon uintptr
 	if icon != nil {
-		if hicon = iconFromImage(icon); hicon != 0 {
+		hicon = iconFromImage(icon)
+		log.Printf("win: balloon hicon=%#x", hicon)
+		if hicon != 0 {
 			d.DwInfoFlags = w32.NiifUser | w32.NiifLargeIcon
 			d.HBalloonIcon = hicon
 		}

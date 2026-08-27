@@ -52,6 +52,11 @@ func run() error {
 
 	ctx := context.Background()
 	path := *dbPath
+	if path == "" && *selftest {
+		// Selftests mutate services; never point them at the real config.
+		path = filepath.Join(dataDir, "selftest.db")
+		os.Remove(path)
+	}
 	if path == "" {
 		if path, err = store.DefaultPath(); err != nil {
 			return err
