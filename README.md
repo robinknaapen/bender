@@ -27,8 +27,7 @@ native-notification passthrough.
 
 ## Building
 
-Needs Go, the Tailwind standalone CLI (≥ 4.1) on PATH, and a checkout of
-loom next to this repo (`replace` directive) until loom is tagged.
+Needs Go and the Tailwind standalone CLI (≥ 4.1) on PATH.
 
 ```sh
 make help      # list targets
