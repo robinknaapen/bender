@@ -77,6 +77,11 @@ type Notify struct {
 	Body  string `json:"body"`
 }
 
+// Icon reports the service page's best icon as an image data URI.
+type Icon struct {
+	URI string `json:"uri"`
+}
+
 // Encode wraps a message in an Envelope and marshals it. The concrete type
 // of v picks the type tag; passing any other type is a programming error.
 func Encode(v any) (string, error) {
@@ -111,6 +116,8 @@ func Decode(raw string) (any, error) {
 		v = &Activate{}
 	case "notify":
 		v = &Notify{}
+	case "icon":
+		v = &Icon{}
 	case "render":
 		v = &Render{}
 	case "open-settings":
@@ -148,6 +155,8 @@ func tagOf(v any) (string, error) {
 		return "activate", nil
 	case Notify:
 		return "notify", nil
+	case Icon:
+		return "icon", nil
 	case OpenSettings:
 		return "open-settings", nil
 	case CloseSettings:
@@ -176,6 +185,8 @@ func deref(v any) any {
 	case *Activate:
 		return *m
 	case *Notify:
+		return *m
+	case *Icon:
 		return *m
 	case *OpenSettings:
 		return *m

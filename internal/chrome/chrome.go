@@ -5,6 +5,7 @@
 package chrome
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -32,9 +33,13 @@ type Item struct {
 	Icon []byte
 }
 
-// iconURI packs PNG bytes into a data URI for an <img> src.
-func iconURI(png []byte) string {
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+// iconURI turns a stored icon into an <img> src. Icons resolved in the
+// page arrive as complete data URIs; the WebView2 fallback is raw PNG.
+func iconURI(icon []byte) string {
+	if bytes.HasPrefix(icon, []byte("data:")) {
+		return string(icon)
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(icon)
 }
 
 // SettingsState is everything the settings page shows.

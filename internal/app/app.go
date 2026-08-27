@@ -43,6 +43,9 @@ type App struct {
 	services []service.Service
 	rules    map[int64]badge.Rule
 	badges   map[int64]badge.Badge
+	// shimIcon marks services whose icon came from the in-page resolver,
+	// which outranks the coarse WebView2 favicon event.
+	shimIcon map[int64]bool
 	activeID int64
 	// lastNotifyID is the service behind the pending notification. Only
 	// one balloon can pend at a time (a new one replaces it), so
@@ -56,13 +59,14 @@ type App struct {
 // Test service for exercising notifications and badges.
 func New(backend platform.Backend, st *store.Store, debug bool) *App {
 	return &App{
-		backend: backend,
-		store:   st,
-		debug:   debug,
-		views:   map[int64]platform.WebView{},
-		rules:   map[int64]badge.Rule{},
-		badges:  map[int64]badge.Badge{},
-		dpi:     96,
+		backend:  backend,
+		store:    st,
+		debug:    debug,
+		views:    map[int64]platform.WebView{},
+		rules:    map[int64]badge.Rule{},
+		badges:   map[int64]badge.Badge{},
+		shimIcon: map[int64]bool{},
+		dpi:      96,
 	}
 }
 
@@ -218,27 +222,45 @@ func (a *App) onServiceMessage(id int64, raw string) {
 		log.Printf("service %d: %v", id, err)
 		return
 	}
-	if n, ok := msg.(bridge.Notify); ok {
-		log.Printf("app: notify from service %d: %q", id, n.Title)
+	switch m := msg.(type) {
+	case bridge.Notify:
+		log.Printf("app: notify from service %d: %q", id, m.Title)
 		a.lastNotifyID = id
-		title := n.Title
+		title := m.Title
 		if svc, ok := a.serviceByID(id); ok && title == "" {
 			title = svc.Name
 		}
-		a.win.Tray().Notify(title, n.Body)
+		a.win.Tray().Notify(title, m.Body)
+	case bridge.Icon:
+		const maxIcon = 512 * 1024
+		if !strings.HasPrefix(m.URI, "data:image/") || len(m.URI) > maxIcon {
+			return
+		}
+		// Page-resolved icons beat the coarse WebView2 favicon.
+		a.shimIcon[id] = true
+		a.saveIcon(id, []byte(m.URI))
 	}
 }
 
-// onFavicon stores a changed service favicon and refreshes the sidebar.
+// onFavicon handles WebView2's own favicon event — the 16px fallback,
+// used only until the page-resolved icon arrives.
 func (a *App) onFavicon(id int64, png []byte) {
+	if a.shimIcon[id] {
+		return
+	}
+	a.saveIcon(id, png)
+}
+
+// saveIcon stores a changed service icon and refreshes the sidebar.
+func (a *App) saveIcon(id int64, icon []byte) {
 	for i := range a.services {
-		if a.services[i].ID != id || bytes.Equal(a.services[i].Favicon, png) {
+		if a.services[i].ID != id || bytes.Equal(a.services[i].Favicon, icon) {
 			continue
 		}
-		a.services[i].Favicon = png
+		a.services[i].Favicon = icon
 		if id > 0 { // synthetic services (test) are not persisted
 			ctx := context.Background()
-			if err := a.store.SetServiceFavicon(ctx, store.SetServiceFaviconParams{Favicon: png, ID: id}); err != nil {
+			if err := a.store.SetServiceFavicon(ctx, store.SetServiceFaviconParams{Favicon: icon, ID: id}); err != nil {
 				log.Printf("store: save favicon: %v", err)
 			}
 		}
