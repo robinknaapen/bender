@@ -741,6 +741,9 @@ func (a *App) shutdown(ctx context.Context) {
 		v.Close()
 	}
 	a.chrome.Close()
+	if a.settings != nil {
+		a.settings.Close()
+	}
 	a.backend.Quit()
 }
 
