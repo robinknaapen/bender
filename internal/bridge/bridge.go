@@ -32,6 +32,42 @@ type Activate struct {
 	ServiceID int64 `json:"serviceId"`
 }
 
+// OpenSettings asks to show the settings view; CloseSettings dismisses it.
+type OpenSettings struct{}
+type CloseSettings struct{}
+
+// Settings page → Go. Form-sourced fields arrive as strings (FormData).
+
+// AddService adds a service from a preset key or a custom name+URL.
+type AddService struct {
+	Preset string `json:"preset"`
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+}
+
+// RemoveService deletes a service permanently.
+type RemoveService struct {
+	ServiceID int64 `json:"serviceId"`
+}
+
+// ToggleService enables or disables a service.
+type ToggleService struct {
+	ServiceID int64 `json:"serviceId"`
+	Enabled   bool  `json:"enabled"`
+}
+
+// MoveService moves a service up (-1) or down (+1) in the sidebar.
+type MoveService struct {
+	ServiceID int64 `json:"serviceId"`
+	Delta     int   `json:"delta"`
+}
+
+// SetBadgeRegex sets (or clears) a service's badge-pattern override.
+type SetBadgeRegex struct {
+	ServiceID int64  `json:"serviceId,string"`
+	Regex     string `json:"regex"`
+}
+
 // Service shim → Go.
 
 // Notify reports a web notification raised by a service page. The service
@@ -77,6 +113,20 @@ func Decode(raw string) (any, error) {
 		v = &Notify{}
 	case "render":
 		v = &Render{}
+	case "open-settings":
+		v = &OpenSettings{}
+	case "close-settings":
+		v = &CloseSettings{}
+	case "svc-add":
+		v = &AddService{}
+	case "svc-remove":
+		v = &RemoveService{}
+	case "svc-toggle":
+		v = &ToggleService{}
+	case "svc-move":
+		v = &MoveService{}
+	case "svc-badge":
+		v = &SetBadgeRegex{}
 	default:
 		return nil, fmt.Errorf("bridge: unknown message type %q", env.Type)
 	}
@@ -98,6 +148,20 @@ func tagOf(v any) (string, error) {
 		return "activate", nil
 	case Notify:
 		return "notify", nil
+	case OpenSettings:
+		return "open-settings", nil
+	case CloseSettings:
+		return "close-settings", nil
+	case AddService:
+		return "svc-add", nil
+	case RemoveService:
+		return "svc-remove", nil
+	case ToggleService:
+		return "svc-toggle", nil
+	case MoveService:
+		return "svc-move", nil
+	case SetBadgeRegex:
+		return "svc-badge", nil
 	default:
 		return "", fmt.Errorf("bridge: unknown message %T", v)
 	}
@@ -112,6 +176,20 @@ func deref(v any) any {
 	case *Activate:
 		return *m
 	case *Notify:
+		return *m
+	case *OpenSettings:
+		return *m
+	case *CloseSettings:
+		return *m
+	case *AddService:
+		return *m
+	case *RemoveService:
+		return *m
+	case *ToggleService:
+		return *m
+	case *MoveService:
+		return *m
+	case *SetBadgeRegex:
 		return *m
 	}
 	return v

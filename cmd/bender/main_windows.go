@@ -30,6 +30,7 @@ func main() {
 
 func run() error {
 	debug := flag.Bool("debug", false, "enable DevTools in webviews")
+	selftest := flag.Bool("selftest", false, "drive the settings lifecycle and exit")
 	dbPath := flag.String("db", "", "database path (default: user config dir)")
 	flag.Parse()
 
@@ -69,5 +70,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	return app.New(backend, st, *debug).Run(ctx)
+	a := app.New(backend, st, *debug)
+	if *selftest {
+		a.Selftest()
+	}
+	return a.Run(ctx)
 }

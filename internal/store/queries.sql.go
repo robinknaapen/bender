@@ -56,6 +56,15 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 	return i, err
 }
 
+const deleteService = `-- name: DeleteService :exec
+DELETE FROM services WHERE id = ?
+`
+
+func (q *Queries) DeleteService(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteService, id)
+	return err
+}
+
 const getSetting = `-- name: GetSetting :one
 SELECT value FROM settings WHERE key = ?
 `
@@ -65,6 +74,42 @@ func (q *Queries) GetSetting(ctx context.Context, key string) (string, error) {
 	var value string
 	err := row.Scan(&value)
 	return value, err
+}
+
+const listAllServices = `-- name: ListAllServices :many
+SELECT id, preset, name, url, profile, position, enabled, badge_regex FROM services ORDER BY position, id
+`
+
+func (q *Queries) ListAllServices(ctx context.Context) ([]Service, error) {
+	rows, err := q.db.QueryContext(ctx, listAllServices)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Service
+	for rows.Next() {
+		var i Service
+		if err := rows.Scan(
+			&i.ID,
+			&i.Preset,
+			&i.Name,
+			&i.Url,
+			&i.Profile,
+			&i.Position,
+			&i.Enabled,
+			&i.BadgeRegex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listEnabledServices = `-- name: ListEnabledServices :many
@@ -103,6 +148,33 @@ func (q *Queries) ListEnabledServices(ctx context.Context) ([]Service, error) {
 	return items, nil
 }
 
+const listProfiles = `-- name: ListProfiles :many
+SELECT profile FROM services
+`
+
+func (q *Queries) ListProfiles(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listProfiles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var profile string
+		if err := rows.Scan(&profile); err != nil {
+			return nil, err
+		}
+		items = append(items, profile)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const putSetting = `-- name: PutSetting :exec
 INSERT INTO settings (key, value) VALUES (?, ?)
 ON CONFLICT (key) DO UPDATE SET value = excluded.value
@@ -115,6 +187,20 @@ type PutSettingParams struct {
 
 func (q *Queries) PutSetting(ctx context.Context, arg PutSettingParams) error {
 	_, err := q.db.ExecContext(ctx, putSetting, arg.Key, arg.Value)
+	return err
+}
+
+const setServiceBadgeRegex = `-- name: SetServiceBadgeRegex :exec
+UPDATE services SET badge_regex = ? WHERE id = ?
+`
+
+type SetServiceBadgeRegexParams struct {
+	BadgeRegex string
+	ID         int64
+}
+
+func (q *Queries) SetServiceBadgeRegex(ctx context.Context, arg SetServiceBadgeRegexParams) error {
+	_, err := q.db.ExecContext(ctx, setServiceBadgeRegex, arg.BadgeRegex, arg.ID)
 	return err
 }
 

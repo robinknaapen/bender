@@ -12,6 +12,18 @@ RETURNING *;
 -- name: UpdateServicePosition :exec
 UPDATE services SET position = ? WHERE id = ?;
 
+-- name: DeleteService :exec
+DELETE FROM services WHERE id = ?;
+
+-- name: SetServiceBadgeRegex :exec
+UPDATE services SET badge_regex = ? WHERE id = ?;
+
+-- name: ListProfiles :many
+SELECT profile FROM services;
+
+-- name: ListAllServices :many
+SELECT * FROM services ORDER BY position, id;
+
 -- name: SetServiceEnabled :exec
 UPDATE services SET enabled = ? WHERE id = ?;
 

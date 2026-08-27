@@ -1,0 +1,160 @@
+package chrome
+
+import (
+	"fmt"
+
+	"github.com/pietjan/loom/button"
+	"github.com/pietjan/loom/field"
+	"github.com/pietjan/loom/heading"
+	"github.com/pietjan/loom/icon"
+	"github.com/pietjan/loom/input"
+	"github.com/pietjan/loom/table"
+	"github.com/pietjan/loom/text"
+)
+
+// settings is the full-content settings page: the configured services
+// with their controls, and the add-service forms. All interactions go
+// through data-msg / data-msg-type; the page holds no state of its own.
+templ settings(state SettingsState) {
+	<div class="mx-auto flex max-w-3xl flex-col gap-8 p-8">
+		<div class="flex items-center justify-between">
+			@heading.New() {
+				Settings
+			}
+			@button.New(button.Attr("data-msg", msgAttr("close-settings", nil))) {
+				Done
+			}
+		</div>
+		if state.Error != "" {
+			<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+				{ state.Error }
+			</div>
+		}
+		<section class="flex flex-col gap-3">
+			@heading.New(heading.Level(2)) {
+				Services
+			}
+			@table.New() {
+				@table.Header() {
+					@table.Row() {
+						@table.Cell() {
+							Service
+						}
+						@table.Cell() {
+							Badge pattern
+						}
+						@table.Cell() {
+							{ "" }
+						}
+					}
+				}
+				@table.Body() {
+					for _, item := range state.Items {
+						@table.Row() {
+							@table.Cell() {
+								<div class="flex flex-col">
+									<span class={ "font-medium", templ.KV("opacity-50", !item.Enabled) }>{ item.Name }</span>
+									@text.New(text.Small) {
+										{ item.URL }
+									}
+								</div>
+							}
+							@table.Cell() {
+								<form data-msg-type="svc-badge" class="flex items-center gap-2">
+									<input type="hidden" name="serviceId" value={ fmt.Sprint(item.ID) }/>
+									@input.New(input.Small, input.Name("regex"), input.Value(item.BadgeRegex), input.Placeholder("preset default"))
+									@button.New(button.Small, button.Submit) {
+										Save
+									}
+								</form>
+							}
+							@table.Cell() {
+								<div class="flex items-center justify-end gap-1">
+									@button.New(moveAttrs(item, -1)...) {
+										@icon.New(icon.CaretUp, icon.ExtraSmall)
+									}
+									@button.New(moveAttrs(item, +1)...) {
+										@icon.New(icon.CaretDown, icon.ExtraSmall)
+									}
+									@button.New(toggleAttrs(item)...) {
+										if item.Enabled {
+											Disable
+										} else {
+											Enable
+										}
+									}
+									@button.New(removeAttrs(item)...) {
+										@icon.New(icon.Trash, icon.ExtraSmall)
+									}
+								</div>
+							}
+						}
+					}
+				}
+			}
+		</section>
+		<section class="flex flex-col gap-3">
+			@heading.New(heading.Level(2)) {
+				Add a service
+			}
+			<div class="flex flex-wrap gap-2">
+				for _, preset := range state.Presets {
+					@button.New(button.Attr("data-msg", msgAttr("svc-add", map[string]any{"preset": preset.Key}))) {
+						@icon.New(icon.Plus, icon.ExtraSmall)
+						{ preset.Name }
+					}
+				}
+			</div>
+			<form data-msg-type="svc-add" class="flex max-w-xl flex-col gap-4">
+				@field.Root(field.Required()) {
+					@field.Label() {
+						Name
+					}
+					@input.New(input.Name("name"), input.Placeholder("My service"))
+				}
+				@field.Root(field.Required()) {
+					@field.Label() {
+						URL
+					}
+					@input.New(input.Type("url"), input.Name("url"), input.Placeholder("https://example.com"))
+				}
+				<div>
+					@button.New(button.Primary, button.Submit) {
+						Add custom service
+					}
+				</div>
+			</form>
+		</section>
+	</div>
+}
+
+func moveAttrs(item SettingsItem, delta int) []button.Option {
+	label := "Move up"
+	if delta > 0 {
+		label = "Move down"
+	}
+	options := []button.Option{
+		button.Small, button.Ghost,
+		button.Label(label),
+		button.Attr("data-msg", msgAttr("svc-move", map[string]any{"serviceId": item.ID, "delta": delta})),
+	}
+	if (delta < 0 && item.First) || (delta > 0 && item.Last) {
+		options = append(options, button.Disabled())
+	}
+	return options
+}
+
+func toggleAttrs(item SettingsItem) []button.Option {
+	return []button.Option{
+		button.Small, button.Ghost,
+		button.Attr("data-msg", msgAttr("svc-toggle", map[string]any{"serviceId": item.ID, "enabled": !item.Enabled})),
+	}
+}
+
+func removeAttrs(item SettingsItem) []button.Option {
+	return []button.Option{
+		button.Small, button.Ghost,
+		button.Label("Remove"),
+		button.Attr("data-msg", msgAttr("svc-remove", map[string]any{"serviceId": item.ID})),
+	}
+}

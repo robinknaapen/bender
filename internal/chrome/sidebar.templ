@@ -5,36 +5,56 @@ import (
 
 	"github.com/pietjan/loom/avatar"
 	lbadge "github.com/pietjan/loom/badge"
+	"github.com/pietjan/loom/icon"
 	"github.com/pietjan/loom/navlist"
 )
 
-// sidebar is the service switcher. Items carry data-service-id for the
-// glue script's delegated click handler; the href is inert.
+// sidebar is the service switcher. Items carry their bridge message in
+// data-msg for the glue script's delegated click handler; hrefs are inert.
 templ sidebar(state State) {
-	@navlist.New(navlist.Label("Services")) {
-		for _, item := range state.Items {
-			@navlist.Item("#", itemOptions(item)...) {
-				@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
-				<span class="truncate">{ item.Name }</span>
-				if item.Badge.Count > 0 {
-					@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
-						{ fmt.Sprint(item.Badge.Count) }
-					}
-				} else if item.Badge.Dot {
-					@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
-						{ "•" }
+	<div class="flex h-screen flex-col justify-between">
+		@navlist.New(navlist.Label("Services")) {
+			for _, item := range state.Items {
+				@navlist.Item("#", itemOptions(item)...) {
+					@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+					<span class="truncate">{ item.Name }</span>
+					if item.Badge.Count > 0 {
+						@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+							{ fmt.Sprint(item.Badge.Count) }
+						}
+					} else if item.Badge.Dot {
+						@lbadge.New(lbadge.Red, lbadge.Pill(), lbadge.Small, lbadge.Class("ml-auto")) {
+							{ "•" }
+						}
 					}
 				}
 			}
 		}
-	}
+		@navlist.New(navlist.Label("App")) {
+			@navlist.Item("#", settingsOptions(state)...) {
+				@icon.New(icon.GearSix, icon.Small)
+				<span>Settings</span>
+			}
+		}
+	</div>
 }
 
 func itemOptions(item Item) []navlist.Option {
 	options := []navlist.Option{
+		navlist.Attr("data-msg", msgAttr("activate", map[string]any{"serviceId": item.ID})),
 		navlist.Attr("data-service-id", fmt.Sprint(item.ID)),
 	}
 	if item.Active {
+		options = append(options, navlist.Current())
+	}
+	return options
+}
+
+func settingsOptions(state State) []navlist.Option {
+	options := []navlist.Option{
+		navlist.Attr("data-msg", msgAttr("open-settings", nil)),
+	}
+	if state.SettingsOpen {
 		options = append(options, navlist.Current())
 	}
 	return options

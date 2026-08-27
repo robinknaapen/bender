@@ -7,7 +7,9 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/pietjan/bender/internal/badge"
 	"github.com/pietjan/bender/internal/bridge"
@@ -24,13 +26,18 @@ const (
 
 // App is the running application. All methods run on the UI thread.
 type App struct {
-	backend platform.Backend
-	store   *store.Store
-	debug   bool
+	backend  platform.Backend
+	store    *store.Store
+	debug    bool
+	selftest bool
 
-	win    platform.Window
-	chrome platform.WebView
-	views  map[int64]platform.WebView
+	win      platform.Window
+	chrome   platform.WebView
+	settings platform.WebView // lazily created on first open
+	views    map[int64]platform.WebView
+
+	settingsOpen bool
+	settingsErr  string
 
 	services []service.Service
 	rules    map[int64]badge.Rule
@@ -110,8 +117,24 @@ func (a *App) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	a.chrome.OnMessage(func(raw string) { a.onChromeMessage(ctx, raw) })
+	// Bridge messages arrive inside WebView2 event handlers, where
+	// creating webviews (or anything that pumps messages) deadlocks —
+	// WebView2 will not deliver callbacks re-entrantly. Dispatch defers
+	// every handler onto a clean stack.
+	a.chrome.OnMessage(func(raw string) {
+		a.backend.Dispatch(func() { a.onChromeMessage(ctx, raw) })
+	})
 	a.chrome.NavigateHTML(chrome.Shell())
+
+	a.settings, err = a.backend.NewWebView(a.win, "")
+	if err != nil {
+		return err
+	}
+	a.settings.OnMessage(func(raw string) {
+		a.backend.Dispatch(func() { a.onSettingsMessage(ctx, raw) })
+	})
+	a.settings.SetVisible(false)
+	a.settings.NavigateHTML(chrome.Shell())
 
 	for _, svc := range a.services {
 		if err := a.addServiceView(svc); err != nil {
@@ -121,6 +144,9 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.applyLayout()
 	a.win.Show()
+	if a.selftest {
+		a.runSelftest(ctx)
+	}
 	return a.backend.Run()
 }
 
@@ -131,9 +157,13 @@ func (a *App) addServiceView(svc service.Service) error {
 	}
 	id := svc.ID
 	view.InitScript(notificationShim)
-	view.OnTitleChanged(func(title string) { a.onTitle(id, title) })
-	view.OnMessage(func(raw string) { a.onServiceMessage(id, raw) })
-	view.SetVisible(id == a.activeID)
+	view.OnTitleChanged(func(title string) {
+		a.backend.Dispatch(func() { a.onTitle(id, title) })
+	})
+	view.OnMessage(func(raw string) {
+		a.backend.Dispatch(func() { a.onServiceMessage(id, raw) })
+	})
+	view.SetVisible(id == a.activeID && !a.settingsOpen)
 	if svc.URL == "" {
 		view.NavigateHTML(testServicePage)
 	} else {
@@ -143,7 +173,7 @@ func (a *App) addServiceView(svc service.Service) error {
 	return nil
 }
 
-// applyLayout positions the chrome and every service view. Hidden views
+// applyLayout positions the chrome and every content view. Hidden views
 // get the content bounds too, so switching never shows a stale size.
 func (a *App) applyLayout() {
 	if a.width == 0 || a.height == 0 {
@@ -152,6 +182,9 @@ func (a *App) applyLayout() {
 	l := ComputeLayout(a.width, a.height, a.dpi)
 	if a.chrome != nil {
 		a.chrome.SetBounds(l.Sidebar)
+	}
+	if a.settings != nil {
+		a.settings.SetBounds(l.Content)
 	}
 	for _, v := range a.views {
 		v.SetBounds(l.Content)
@@ -168,7 +201,10 @@ func (a *App) onChromeMessage(ctx context.Context, raw string) {
 	case bridge.Ready:
 		a.renderChrome()
 	case bridge.Activate:
+		a.closeSettings()
 		a.activate(ctx, m.ServiceID)
+	case bridge.OpenSettings:
+		a.openSettings(ctx)
 	}
 }
 
@@ -243,11 +279,11 @@ func (a *App) chromeState() chrome.State {
 		items[i] = chrome.Item{
 			ID:     svc.ID,
 			Name:   svc.Name,
-			Active: svc.ID == a.activeID,
+			Active: svc.ID == a.activeID && !a.settingsOpen,
 			Badge:  a.badges[svc.ID],
 		}
 	}
-	return chrome.State{Items: items}
+	return chrome.State{Items: items, SettingsOpen: a.settingsOpen}
 }
 
 func (a *App) ruleFor(svc service.Service) badge.Rule {
@@ -268,6 +304,260 @@ func (a *App) serviceByID(id int64) (service.Service, bool) {
 		}
 	}
 	return service.Service{}, false
+}
+
+// openSettings shows the settings view.
+func (a *App) openSettings(ctx context.Context) {
+	if a.settingsOpen {
+		return
+	}
+	if active, ok := a.views[a.activeID]; ok {
+		active.SetVisible(false)
+	}
+	a.settings.SetVisible(true)
+	a.settings.Focus()
+	a.settingsOpen = true
+	a.renderChrome()
+	a.renderSettings(ctx)
+}
+
+// closeSettings hides the settings view and restores the active service.
+func (a *App) closeSettings() {
+	if !a.settingsOpen {
+		return
+	}
+	a.settings.SetVisible(false)
+	if active, ok := a.views[a.activeID]; ok {
+		active.SetVisible(true)
+		active.Focus()
+	}
+	a.settingsOpen = false
+	a.renderChrome()
+}
+
+func (a *App) onSettingsMessage(ctx context.Context, raw string) {
+	msg, err := bridge.Decode(raw)
+	if err != nil {
+		log.Printf("settings: %v", err)
+		return
+	}
+	switch m := msg.(type) {
+	case bridge.Ready:
+		a.renderSettings(ctx)
+	case bridge.CloseSettings:
+		a.closeSettings()
+	case bridge.AddService:
+		a.settingsErr = errText(a.addService(ctx, m))
+	case bridge.RemoveService:
+		a.settingsErr = errText(a.removeService(ctx, m.ServiceID))
+	case bridge.ToggleService:
+		a.settingsErr = errText(a.toggleService(ctx, m))
+	case bridge.MoveService:
+		a.settingsErr = errText(a.moveService(ctx, m))
+	case bridge.SetBadgeRegex:
+		a.settingsErr = errText(a.setBadgeRegex(ctx, m))
+	default:
+		return
+	}
+	if _, isReady := msg.(bridge.Ready); !isReady {
+		a.renderSettings(ctx)
+	}
+}
+
+func errText(err error) string {
+	if err != nil {
+		log.Printf("settings: %v", err)
+		return err.Error()
+	}
+	return ""
+}
+
+func (a *App) addService(ctx context.Context, m bridge.AddService) error {
+	name, url := strings.TrimSpace(m.Name), strings.TrimSpace(m.URL)
+	if m.Preset != "" {
+		p, ok := service.PresetByKey(m.Preset)
+		if !ok {
+			return fmt.Errorf("unknown preset %q", m.Preset)
+		}
+		name, url = p.Name, p.URL
+	}
+	if name == "" {
+		return fmt.Errorf("a service needs a name")
+	}
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
+		return fmt.Errorf("the URL must start with http:// or https://")
+	}
+	profiles, err := a.store.ListProfiles(ctx)
+	if err != nil {
+		return err
+	}
+	all, err := a.store.ListAllServices(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = a.store.CreateService(ctx, store.CreateServiceParams{
+		Preset:   m.Preset,
+		Name:     name,
+		Url:      url,
+		Profile:  service.NewProfile(name, profiles),
+		Position: int64(len(all)),
+	})
+	if err != nil {
+		return err
+	}
+	return a.reload(ctx)
+}
+
+func (a *App) removeService(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("the test service cannot be removed")
+	}
+	if err := a.store.DeleteService(ctx, id); err != nil {
+		return err
+	}
+	return a.reload(ctx)
+}
+
+func (a *App) toggleService(ctx context.Context, m bridge.ToggleService) error {
+	if m.ServiceID <= 0 {
+		return fmt.Errorf("the test service cannot be disabled")
+	}
+	enabled := int64(0)
+	if m.Enabled {
+		enabled = 1
+	}
+	if err := a.store.SetServiceEnabled(ctx, store.SetServiceEnabledParams{Enabled: enabled, ID: m.ServiceID}); err != nil {
+		return err
+	}
+	return a.reload(ctx)
+}
+
+func (a *App) moveService(ctx context.Context, m bridge.MoveService) error {
+	rows, err := a.store.ListAllServices(ctx)
+	if err != nil {
+		return err
+	}
+	i := -1
+	for n, r := range rows {
+		if r.ID == m.ServiceID {
+			i = n
+		}
+	}
+	j := i + m.Delta
+	if i < 0 || j < 0 || j >= len(rows) {
+		return nil
+	}
+	rows[i], rows[j] = rows[j], rows[i]
+	// Renumber the whole list; it is small and this keeps positions dense.
+	for n, r := range rows {
+		if err := a.store.UpdateServicePosition(ctx, store.UpdateServicePositionParams{Position: int64(n), ID: r.ID}); err != nil {
+			return err
+		}
+	}
+	return a.reload(ctx)
+}
+
+func (a *App) setBadgeRegex(ctx context.Context, m bridge.SetBadgeRegex) error {
+	regex := strings.TrimSpace(m.Regex)
+	if regex != "" {
+		if _, err := badge.Compile(regex); err != nil {
+			return fmt.Errorf("bad pattern: %v", err)
+		}
+	}
+	if m.ServiceID <= 0 {
+		return fmt.Errorf("the test service keeps the generic rule")
+	}
+	if err := a.store.SetServiceBadgeRegex(ctx, store.SetServiceBadgeRegexParams{BadgeRegex: regex, ID: m.ServiceID}); err != nil {
+		return err
+	}
+	return a.reload(ctx)
+}
+
+// reload re-reads the store and reconciles the running webviews with it:
+// new/re-enabled services get views, removed/disabled ones are closed.
+// The sidebar and settings page re-render from the result.
+func (a *App) reload(ctx context.Context) error {
+	services, err := a.store.Services(ctx)
+	if err != nil {
+		return err
+	}
+	if a.debug {
+		services = append(services, service.Service{ID: -1, Name: "Test", Profile: "svc-test"})
+	}
+	a.services = services
+
+	current := map[int64]service.Service{}
+	for _, svc := range a.services {
+		current[svc.ID] = svc
+		a.rules[svc.ID] = a.ruleFor(svc)
+	}
+	for id, view := range a.views {
+		if _, ok := current[id]; !ok {
+			view.Close()
+			delete(a.views, id)
+			delete(a.badges, id)
+			delete(a.rules, id)
+		}
+	}
+	if _, ok := current[a.activeID]; !ok && len(a.services) > 0 {
+		a.activeID = a.services[0].ID
+	}
+	for _, svc := range a.services {
+		if _, ok := a.views[svc.ID]; !ok {
+			if err := a.addServiceView(svc); err != nil {
+				return err
+			}
+		}
+	}
+	a.applyLayout()
+	a.renderChrome()
+	return nil
+}
+
+func (a *App) renderSettings(ctx context.Context) {
+	if a.settings == nil {
+		return
+	}
+	state, err := a.settingsState(ctx)
+	if err != nil {
+		log.Printf("settings: %v", err)
+		return
+	}
+	html, err := chrome.RenderSettings(state)
+	if err != nil {
+		log.Printf("settings: render: %v", err)
+		return
+	}
+	msg, err := bridge.Encode(bridge.Render{HTML: html})
+	if err != nil {
+		log.Printf("settings: encode: %v", err)
+		return
+	}
+	a.settings.PostJSON(msg)
+}
+
+func (a *App) settingsState(ctx context.Context) (chrome.SettingsState, error) {
+	rows, err := a.store.ListAllServices(ctx)
+	if err != nil {
+		return chrome.SettingsState{}, err
+	}
+	items := make([]chrome.SettingsItem, len(rows))
+	for i, r := range rows {
+		items[i] = chrome.SettingsItem{
+			ID:         r.ID,
+			Name:       r.Name,
+			URL:        r.Url,
+			Enabled:    r.Enabled != 0,
+			BadgeRegex: r.BadgeRegex,
+			First:      i == 0,
+			Last:       i == len(rows)-1,
+		}
+	}
+	presets := make([]chrome.SettingsPreset, len(service.Presets))
+	for i, p := range service.Presets {
+		presets[i] = chrome.SettingsPreset{Key: p.Key, Name: p.Name}
+	}
+	return chrome.SettingsState{Items: items, Presets: presets, Error: a.settingsErr}, nil
 }
 
 // restoreActive picks the service to show first: the persisted one when it

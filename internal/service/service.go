@@ -3,6 +3,11 @@
 // Service row in the store carries what the user chose.
 package service
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Service is one configured messaging service.
 type Service struct {
 	ID      int64
@@ -40,4 +45,32 @@ func PresetByKey(key string) (Preset, bool) {
 		}
 	}
 	return Preset{}, false
+}
+
+// NewProfile derives a unique browsing-profile name from a service name:
+// "svc-" plus the lowercased alphanumeric slug, suffixed with a counter
+// when taken. Profiles must be stable and unique per service.
+func NewProfile(name string, taken []string) string {
+	var slug strings.Builder
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			slug.WriteRune(r)
+		case r == ' ', r == '-', r == '_':
+			slug.WriteRune('-')
+		}
+	}
+	base := "svc-" + slug.String()
+	if slug.Len() == 0 {
+		base = "svc-custom"
+	}
+	inUse := make(map[string]bool, len(taken))
+	for _, t := range taken {
+		inUse[t] = true
+	}
+	profile := base
+	for n := 2; inUse[profile]; n++ {
+		profile = fmt.Sprintf("%s-%d", base, n)
+	}
+	return profile
 }

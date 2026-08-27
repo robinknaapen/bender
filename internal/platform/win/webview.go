@@ -13,9 +13,10 @@ import (
 
 // WebView adapts a WebView2 controller pair to platform.WebView.
 type WebView struct {
-	id   int
-	ctrl *webview2.Controller
-	core *webview2.CoreWebView2
+	id     int
+	ctrl   *webview2.Controller
+	core   *webview2.CoreWebView2
+	closed bool
 }
 
 var webViewCount int
@@ -41,6 +42,9 @@ func newWebView(w *Window, ctrl *webview2.Controller, debug bool) (*WebView, err
 		id := v.id
 		time.AfterFunc(5*time.Second, func() {
 			w.backend.Dispatch(func() {
+				if v.closed {
+					return
+				}
 				b, err := ctrl.Bounds()
 				log.Printf("win: webview %d steady: bounds=%+v visible=%v err=%v", id, b, ctrl.IsVisible(), err)
 				core.ExecuteScript(`innerWidth+"x"+innerHeight+" "+location.href.slice(0,40)+" Notification="+Notification.name+"/"+Notification.permission`,
@@ -51,29 +55,46 @@ func newWebView(w *Window, ctrl *webview2.Controller, debug bool) (*WebView, err
 	if err := core.AutoGrantNotifications(); err != nil {
 		return nil, err
 	}
-	w.onMove = append(w.onMove, ctrl.NotifyParentWindowPositionChanged)
+	w.onMove = append(w.onMove, func() {
+		// The hook outlives the webview; never call into a closed one.
+		if !v.closed {
+			ctrl.NotifyParentWindowPositionChanged()
+		}
+	})
 	return v, nil
 }
 
 func (v *WebView) Navigate(url string) {
+	if v.closed {
+		return
+	}
 	if err := v.core.Navigate(url); err != nil {
 		log.Printf("win: %v", err)
 	}
 }
 
 func (v *WebView) NavigateHTML(html string) {
+	if v.closed {
+		return
+	}
 	if err := v.core.NavigateToString(html); err != nil {
 		log.Printf("win: %v", err)
 	}
 }
 
 func (v *WebView) InitScript(js string) {
+	if v.closed {
+		return
+	}
 	if err := v.core.AddScriptOnDocumentCreated(js); err != nil {
 		log.Printf("win: %v", err)
 	}
 }
 
 func (v *WebView) PostJSON(json string) {
+	if v.closed {
+		return
+	}
 	if err := v.core.PostWebMessageAsJson(json); err != nil {
 		log.Printf("win: %v", err)
 	}
@@ -92,6 +113,9 @@ func (v *WebView) OnTitleChanged(fn func(title string)) {
 }
 
 func (v *WebView) SetBounds(r platform.Rect) {
+	if v.closed {
+		return
+	}
 	err := v.ctrl.SetBounds(w32.Rect{
 		Left:   int32(r.X),
 		Top:    int32(r.Y),
@@ -104,17 +128,27 @@ func (v *WebView) SetBounds(r platform.Rect) {
 }
 
 func (v *WebView) SetVisible(visible bool) {
+	if v.closed {
+		return
+	}
 	if err := v.ctrl.SetVisible(visible); err != nil {
 		log.Printf("win: %v", err)
 	}
 }
 
 func (v *WebView) Focus() {
+	if v.closed {
+		return
+	}
 	if err := v.ctrl.MoveFocus(); err != nil {
 		log.Printf("win: %v", err)
 	}
 }
 
 func (v *WebView) Close() {
+	if v.closed {
+		return
+	}
+	v.closed = true
 	v.ctrl.Close()
 }
