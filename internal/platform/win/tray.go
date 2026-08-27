@@ -19,6 +19,10 @@ type Tray struct {
 	menu          []platform.MenuItem
 	onActivate    func()
 	onNotifyClick func()
+	// balloonIcon is the HICON of the last shown notification. The shell
+	// renders toasts asynchronously, so it must outlive the Notify call;
+	// it is destroyed when the next notification replaces it.
+	balloonIcon uintptr
 }
 
 func newTray(w *Window) *Tray {
@@ -61,9 +65,7 @@ func (t *Tray) Notify(title, body string, icon image.Image) {
 	copyUTF16(d.SzInfo[:], body)
 	var hicon uintptr
 	if icon != nil {
-		hicon = iconFromImage(icon)
-		log.Printf("win: balloon hicon=%#x", hicon)
-		if hicon != 0 {
+		if hicon = iconFromImage(icon); hicon != 0 {
 			d.DwInfoFlags = w32.NiifUser | w32.NiifLargeIcon
 			d.HBalloonIcon = hicon
 		}
@@ -72,10 +74,10 @@ func (t *Tray) Notify(title, body string, icon image.Image) {
 	if r == 0 {
 		log.Printf("win: tray notify failed: %v", err)
 	}
-	if hicon != 0 {
-		// The shell copies the icon during the call.
-		w32.DestroyIcon.Call(hicon)
+	if t.balloonIcon != 0 {
+		w32.DestroyIcon.Call(t.balloonIcon)
 	}
+	t.balloonIcon = hicon
 }
 
 // notifyIconSize is the balloon icon edge in pixels (SM_CXICON-ish).
@@ -181,6 +183,10 @@ func (t *Tray) showMenu() {
 // remove deletes the icon; call on shutdown.
 func (t *Tray) remove() {
 	w32.ShellNotifyIcon.Call(w32.NimDelete, uintptr(unsafe.Pointer(t.data())))
+	if t.balloonIcon != 0 {
+		w32.DestroyIcon.Call(t.balloonIcon)
+		t.balloonIcon = 0
+	}
 }
 
 func copyUTF16(dst []uint16, s string) {

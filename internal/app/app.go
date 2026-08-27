@@ -256,7 +256,6 @@ func (a *App) notify(id int64, title, body string) {
 			title = svc.Name
 		}
 		icon = decodeIcon(svc.Favicon)
-		log.Printf("app: notify icon: stored=%d decoded=%v head=%.30q", len(svc.Favicon), icon != nil, svc.Favicon)
 	}
 	a.win.Tray().Notify(title, body, icon)
 }
