@@ -21,9 +21,13 @@ var Dark = sync.OnceValue(func() bool {
 	case "light":
 		return false
 	}
-	scheme := native.SettingsString("org.gnome.desktop.interface", "color-scheme")
-	if scheme != "" {
-		return strings.Contains(scheme, "dark")
+	// Only an explicit preference counts; "default" means the desktop
+	// has no opinion and bender's design leans dark.
+	switch scheme := native.SettingsString("org.gnome.desktop.interface", "color-scheme"); {
+	case strings.Contains(scheme, "dark"):
+		return true
+	case strings.Contains(scheme, "light"):
+		return false
 	}
 	return true
 })
@@ -39,7 +43,17 @@ func applyTheme() {
 		native.SetBoolProperty(settings, "gtk-application-prefer-dark-theme", true)
 	}
 	provider := native.GtkCssProviderNew()
-	native.GtkCssProviderLoadFromString(provider, "window { background-color: #18181b; }")
+	native.GtkCssProviderLoadFromString(provider, `
+		window { background-color: #18181b; }
+		headerbar {
+			background: #18181b;
+			color: #f4f4f5;
+			border: none;
+			box-shadow: none;
+			min-height: 38px;
+		}
+		headerbar windowtitle { color: #f4f4f5; }
+	`)
 	if display := native.GdkDisplayGetDefault(); display != 0 {
 		native.GtkStyleContextAddProviderForDisplay(display, provider, native.StyleProviderPriorityApplication)
 	}

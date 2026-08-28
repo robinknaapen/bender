@@ -23,6 +23,9 @@ var (
 	GtkWidgetRealize        func(w uintptr)
 	GtkWidgetGetNative      func(w uintptr) uintptr
 
+	GtkHeaderBarNew      func() uintptr
+	GtkWindowSetTitlebar func(win, titlebar uintptr)
+
 	GtkFixedNew    func() uintptr
 	GtkFixedPut    func(fixed, child uintptr, x, y float64)
 	GtkFixedMove   func(fixed, child uintptr, x, y float64)
@@ -59,6 +62,8 @@ var gtkFuncs = []registration{
 	{&GtkWidgetGetHeight, "gtk_widget_get_height"},
 	{&GtkWidgetRealize, "gtk_widget_realize"},
 	{&GtkWidgetGetNative, "gtk_widget_get_native"},
+	{&GtkHeaderBarNew, "gtk_header_bar_new"},
+	{&GtkWindowSetTitlebar, "gtk_window_set_titlebar"},
 	{&GtkFixedNew, "gtk_fixed_new"},
 	{&GtkFixedPut, "gtk_fixed_put"},
 	{&GtkFixedMove, "gtk_fixed_move"},

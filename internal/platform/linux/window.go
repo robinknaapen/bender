@@ -32,6 +32,8 @@ func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) 
 	if bounds.W > 0 && bounds.H > 0 {
 		native.GtkWindowSetDefaultSize(w.win, int32(bounds.W), int32(bounds.H))
 	}
+	// A client-side header bar, so the theme CSS owns the titlebar too.
+	native.GtkWindowSetTitlebar(w.win, native.GtkHeaderBarNew())
 	w.fixed = native.GtkFixedNew()
 	native.GtkWindowSetChild(w.win, w.fixed)
 
