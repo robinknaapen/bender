@@ -55,6 +55,10 @@ func newTray(w *Window) *Tray {
 	return t
 }
 
+// Available reports whether a StatusNotifierWatcher accepted the icon —
+// without one (GNOME sans extension, WSLg) there is no tray to hide to.
+func (t *Tray) Available() bool { return t.sni != nil && t.sni.registered }
+
 // SetTooltip sets the hover text.
 func (t *Tray) SetTooltip(tip string) {
 	if t.sni != nil {

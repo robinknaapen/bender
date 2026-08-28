@@ -45,6 +45,9 @@ func (t *Tray) data() *w32.NotifyIconData {
 	return d
 }
 
+// Available is always true on Windows: the notification area exists.
+func (t *Tray) Available() bool { return true }
+
 // SetTooltip sets the hover text.
 func (t *Tray) SetTooltip(tip string) {
 	d := t.data()

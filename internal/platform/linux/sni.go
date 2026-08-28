@@ -25,6 +25,7 @@ type sniItem struct {
 	conn       *dbus.Conn
 	props      *prop.Properties
 	onActivate func()
+	registered bool
 }
 
 // tooltip is the SNI ToolTip type (s a(iiay) s s).
@@ -72,6 +73,7 @@ func newSNI(b *Backend, conn *dbus.Conn) *sniItem {
 func (s *sniItem) register() {
 	watcher := s.conn.Object(watcherName, "/StatusNotifierWatcher")
 	call := watcher.Call(watcherName+".RegisterStatusNotifierItem", 0, s.conn.Names()[0])
+	s.registered = call.Err == nil
 	if call.Err != nil {
 		// No watcher (GNOME without extension, WSLg): the item stays
 		// exported; a watcher appearing later picks us up via the

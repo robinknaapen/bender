@@ -104,12 +104,18 @@ func (a *App) Run(ctx context.Context) error {
 		a.width, a.height, a.dpi = w, h, dpi
 		a.applyLayout()
 	})
-	a.win.OnCloseRequest(func() bool {
-		a.win.Hide()
-		return false // close means hide; Quit lives in the tray menu
-	})
-
 	tray := a.win.Tray()
+	a.win.OnCloseRequest(func() bool {
+		// Close means hide; Quit lives in the tray menu. But hiding with
+		// no reachable tray icon would strand the app — quit instead
+		// (shutdown persists state and ends the loop cleanly).
+		if !tray.Available() {
+			a.shutdown(ctx)
+			return false
+		}
+		a.win.Hide()
+		return false
+	})
 	tray.SetTooltip("Bender")
 	tray.SetMenu([]platform.MenuItem{
 		{Label: "Show Bender", OnClick: a.win.Show},

@@ -103,6 +103,10 @@ type WebView interface {
 
 // Tray is the system notification-area icon.
 type Tray interface {
+	// Available reports whether the icon is actually presented somewhere
+	// the user can reach (some Linux desktops have no tray host). When
+	// false, hide-to-tray would strand the app.
+	Available() bool
 	SetTooltip(string)
 	SetMenu([]MenuItem)
 	// Notify shows a desktop notification attributed to the app. icon,
