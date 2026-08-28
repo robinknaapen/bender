@@ -38,6 +38,7 @@ func newNotifier(b *Backend, conn *dbus.Conn) *notifier {
 	conn.Signal(ch)
 	go func() {
 		for sig := range ch {
+			log.Printf("linux: dbus signal %s %v", sig.Name, sig.Body)
 			if sig.Name != "org.freedesktop.Notifications.ActionInvoked" || len(sig.Body) < 2 {
 				continue
 			}
