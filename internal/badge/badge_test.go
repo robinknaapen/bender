@@ -13,6 +13,10 @@ func TestGeneric(t *testing.T) {
 		{"(99+) Inbox", Badge{}, Badge{Count: 99}, true},
 		{"WhatsApp", Badge{Count: 3}, Badge{}, true},
 		{"", Badge{Count: 3}, Badge{Count: 3}, false}, // says nothing, keep
+		// Mattermost: "(n)" is the mention count, "*" plain unreads.
+		{"(2) Town Square - Acme Mattermost", Badge{}, Badge{Count: 2}, true},
+		{"* Town Square - Acme Mattermost", Badge{}, Badge{Dot: true}, true},
+		{"Town Square - Acme Mattermost", Badge{Dot: true}, Badge{}, true},
 	}
 	for _, tt := range tests {
 		got, changed := Parse(Generic, tt.prev, tt.title)

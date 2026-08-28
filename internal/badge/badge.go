@@ -31,11 +31,13 @@ type Rule struct {
 }
 
 // Generic is the fallback rule: a leading parenthesised number is the
-// count — "(3) WhatsApp", "(99+) Inbox" — and any title without one is
-// considered read.
+// count — "(3) WhatsApp", "(99+) Inbox" — and a leading "*" is the
+// Slack-convention unread marker (Mattermost and others use it too).
+// Any other title is considered read.
 var Generic = Rule{
 	CountRe: regexp.MustCompile(`^\((\d+)\+?\)`),
-	ClearRe: regexp.MustCompile(`^[^(]`),
+	DotRe:   regexp.MustCompile(`^\*`),
+	ClearRe: regexp.MustCompile(`^[^(*]`),
 }
 
 // rules per service preset; Parse falls back to Generic for unknown keys.
