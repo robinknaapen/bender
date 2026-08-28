@@ -15,6 +15,7 @@ var (
 	gBytesGetSize   func(bytes uintptr) uint64
 	GBytesUnref     func(bytes uintptr)
 	GTimeoutAddFull func(priority int32, interval uint32, fn uintptr, data uintptr, notify uintptr) uint32
+	GSetPrgname     func(name string)
 )
 
 var glibFuncs = []registration{
@@ -28,6 +29,7 @@ var glibFuncs = []registration{
 	{&gBytesGetSize, "g_bytes_get_size"},
 	{&GBytesUnref, "g_bytes_unref"},
 	{&GTimeoutAddFull, "g_timeout_add_full"},
+	{&GSetPrgname, "g_set_prgname"},
 }
 
 // GLib source priorities.

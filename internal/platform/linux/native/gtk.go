@@ -12,6 +12,7 @@ var (
 	GtkWindowPresent        func(win uintptr)
 	GtkWindowDestroy        func(win uintptr)
 	GtkWindowIsMaximized    func(win uintptr) int32
+	GtkWindowSetIconName    func(win uintptr, name string)
 
 	GtkWidgetSetVisible     func(w uintptr, visible int32)
 	GtkWidgetGetVisible     func(w uintptr) int32
@@ -53,6 +54,7 @@ var gtkFuncs = []registration{
 	{&GtkWindowPresent, "gtk_window_present"},
 	{&GtkWindowDestroy, "gtk_window_destroy"},
 	{&GtkWindowIsMaximized, "gtk_window_is_maximized"},
+	{&GtkWindowSetIconName, "gtk_window_set_icon_name"},
 	{&GtkWidgetSetVisible, "gtk_widget_set_visible"},
 	{&GtkWidgetGetVisible, "gtk_widget_get_visible"},
 	{&GtkWidgetSetSizeRequest, "gtk_widget_set_size_request"},

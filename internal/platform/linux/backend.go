@@ -42,6 +42,10 @@ func New(dataDir string, debug bool) (*Backend, error) {
 	if err := native.Load(); err != nil {
 		return nil, err
 	}
+	// The program name becomes the Wayland app-id, which shells match
+	// against the desktop entry registerIdentity installs.
+	native.GSetPrgname("bender")
+	registerIdentity()
 	native.GtkInit()
 	applyTheme()
 	return &Backend{

@@ -26,6 +26,7 @@ func newWindow(b *Backend, title string, bounds platform.Rect) (*Window, error) 
 	w := &Window{backend: b}
 	w.win = native.GObjectRefSink(native.GtkWindowNew())
 	native.GtkWindowSetTitle(w.win, title)
+	native.GtkWindowSetIconName(w.win, "bender")
 	// GTK4 removed window positioning outright; only size applies.
 	// Sizes are logical px; scale is 1 pre-realize and the first layout
 	// pass corrects any difference.
