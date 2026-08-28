@@ -3,6 +3,8 @@
 package linux
 
 import (
+	_ "embed"
+
 	"github.com/pietjan/bender/internal/platform"
 	"github.com/pietjan/bender/internal/platform/linux/native"
 )
@@ -14,21 +16,9 @@ const benderUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, l
 // polyfill emulates WebView2's window.chrome.webview over WebKit script
 // messaging, so every page, shim, and glue script runs byte-identical
 // on both platforms. Added before any InitScript.
-const polyfill = `(() => {
-	if (window.chrome && window.chrome.webview) return;
-	const native = window.webkit.messageHandlers.bender;
-	const listeners = new Set();
-	const webview = {
-		postMessage: (obj) => native.postMessage(JSON.stringify(obj)),
-		addEventListener: (type, fn) => { if (type === "message") listeners.add(fn); },
-		removeEventListener: (type, fn) => { listeners.delete(fn); },
-		__deliver: (data) => {
-			const e = { data };
-			for (const fn of [...listeners]) { try { fn(e); } catch (err) {} }
-		},
-	};
-	window.chrome = Object.assign(window.chrome || {}, { webview });
-})();`
+//
+//go:embed polyfill.js
+var polyfill string
 
 // WebView is one WebKitWebView inside the window's GtkFixed.
 type WebView struct {

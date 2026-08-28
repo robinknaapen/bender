@@ -1,126 +1,33 @@
 package app
 
-// notificationShim is injected into every service webview before any page
-// script runs. It replaces window.Notification with a stand-in that posts
-// the notification to Go (which raises a native one) and reports the
-// permission as granted, so sites don't gate on a prompt that native
-// WebView2 would never show usefully. Service-worker notifications bypass
-// this; the NotificationReceived COM event can cover those later.
-const notificationShim = `(() => {
-	const Native = window.Notification;
-	const post = (title, body) =>
-		window.chrome.webview.postMessage({ type: "notify", data: { title: String(title), body: String(body || "") } });
-	class ShimNotification {
-		constructor(title, options) {
-			post(title, options && options.body);
-			this.title = String(title);
-		}
-		close() {}
-		addEventListener() {}
-		removeEventListener() {}
-		static requestPermission(callback) {
-			// Forward to the real API so the origin gets genuinely
-			// granted permission (auto-allowed by the host, persisted
-			// per profile) — service-worker notifications need it.
-			try { Native && Native.requestPermission().catch(() => {}); } catch (e) {}
-			if (callback) callback("granted");
-			return Promise.resolve("granted");
-		}
-	}
-	Object.defineProperty(ShimNotification, "permission", { get: () => "granted" });
-	Object.defineProperty(ShimNotification, "maxActions", { get: () => 0 });
-	window.Notification = ShimNotification;
-})();`
+import (
+	_ "embed"
+)
 
-// badgeSniffer is injected into every service webview. Some apps never
-// encode unread state in the document title (Mattermost shows "(n)" only
-// for mentions and nothing at all for plain unreads), so this reads it
-// from their DOM instead. Each reader detects its own app and returns
-// null elsewhere, which keeps the script safe to inject universally —
-// self-hosted instances included, where no preset key or URL can tell us
-// what the service is. State posts only on change; the host retires
-// title-based parsing for a service after its first badge message.
-const badgeSniffer = `(() => {
-	const post = (count, dot) =>
-		window.chrome.webview.postMessage({ type: "badge", data: { count, dot } });
-	const readers = [
-		() => { // Mattermost: unread channels get .unread, mentions a numeric .badge
-			const root = document.getElementById("sidebar-left") || document.getElementById("SidebarContainer");
-			if (!root || !root.querySelector(".SidebarChannel")) return null;
-			let count = 0;
-			for (const b of root.querySelectorAll(".SidebarChannel .badge"))
-				count += parseInt(b.textContent, 10) || 0;
-			const dot = !!root.querySelector(".SidebarChannel.unread, .unread-title");
-			return { count, dot };
-		},
-	];
-	let last = "";
-	const scan = () => {
-		for (const read of readers) {
-			let b = null;
-			try { b = read(); } catch (e) {}
-			if (!b) continue;
-			const key = b.count + ":" + b.dot;
-			if (key !== last) { last = key; post(b.count, b.dot); }
-			return;
-		}
-	};
-	addEventListener("load", () => setInterval(scan, 2000));
-})();`
+var (
+	// notificationShim is injected into every service webview before any page
+	// script runs. It replaces window.Notification with a stand-in that posts
+	// the notification to Go (which raises a native one) and reports the
+	// permission as granted, so sites don't gate on a prompt that native
+	// WebView2 would never show usefully. Service-worker notifications bypass
+	// this; the NotificationReceived COM event can cover those later.
+	//go:embed js/notification.js
+	notificationJS string
 
-// iconResolver is injected into every service webview.
-const iconResolver = `/* Icon resolution: pick the page's best static icon and post it as a
-   data URI. The web-app manifest usually carries the largest art
-   (192/512px), then apple-touch-icon, then the biggest link icon.
-   data: favicons are skipped — that's the badged canvas favicon some
-   services swap in. WebView2's own favicon event stays as fallback. */
-(() => {
-	const post = (uri) => window.chrome.webview.postMessage({ type: "icon", data: { uri } });
-	const fromManifest = async () => {
-		const link = document.querySelector('link[rel="manifest"]');
-		if (!link || !link.href) return null;
-		const m = await fetch(link.href).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-		if (!m || !Array.isArray(m.icons)) return null;
-		const size = (i) => Math.max(0, ...String(i.sizes || "").split(" ").map((s) => parseInt(s) || 0));
-		const best = [...m.icons].sort((a, b) => size(b) - size(a))[0];
-		return best && best.src ? new URL(best.src, link.href).href : null;
-	};
-	const fromLinks = () => {
-		const links = [...document.querySelectorAll(
-			'link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]',
-		)].filter((l) => l.href && !l.href.startsWith("data:"));
-		const score = (l) => {
-			let s = l.rel.toLowerCase().includes("apple-touch-icon") ? 1000 : 0;
-			const m = /(\d+)x/.exec((l.sizes && l.sizes.value) || "");
-			return s + (m ? Math.min(+m[1], 512) : 0);
-		};
-		return links.sort((a, b) => score(b) - score(a)).map((l) => l.href);
-	};
-	const resolve = async () => {
-		// Best first; a candidate can fail to fetch (CORS on CDN-hosted
-		// manifest icons), so fall through until one succeeds.
-		const candidates = [await fromManifest(), ...fromLinks()]
-			.filter((u) => u && !u.startsWith("data:"));
-		for (const url of candidates) {
-			try {
-				const blob = await fetch(url).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(r.status))));
-				// Rasterize through a canvas: normalizes every format the
-				// browser can decode (ico included) to PNG for the host.
-				const bmp = await createImageBitmap(blob);
-				const n = Math.min(256, Math.max(bmp.width, bmp.height));
-				if (!n) continue;
-				const canvas = document.createElement("canvas");
-				canvas.width = canvas.height = n;
-				canvas.getContext("2d").drawImage(bmp, 0, 0, n, n);
-				bmp.close();
-				post(canvas.toDataURL("image/png"));
-				return;
-			} catch (e) {}
-		}
-	};
-	addEventListener("load", () => {
-		resolve();
-		// SPAs often install their real icon links well after load.
-		setTimeout(resolve, 10000);
-	});
-})();`
+	// badgeSniffer is injected into every service webview. Some apps never
+	// encode unread state in the document title (Mattermost shows "(n)" only
+	// for mentions and nothing at all for plain unreads), so this reads it
+	// from their DOM instead. Each reader detects its own app and returns
+	// null elsewhere, which keeps the script safe to inject universally —
+	// self-hosted instances included, where no preset key or URL can tell us
+	// what the service is. State posts only on change; the host retires
+	// title-based parsing for a service after its first badge message.
+
+	//go:embed js/badge-sniffer.js
+	badgeSnifferJS string
+
+	// iconResolver is injected into every service webview.
+
+	//go:embed js/icon-resolver.js
+	iconResolverJS string
+)

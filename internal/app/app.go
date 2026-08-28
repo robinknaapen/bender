@@ -14,10 +14,10 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-
-	_ "golang.org/x/image/webp"
 	"log"
 	"strings"
+
+	_ "golang.org/x/image/webp"
 
 	"github.com/pietjan/bender/internal/badge"
 	"github.com/pietjan/bender/internal/bridge"
@@ -185,7 +185,7 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnNotification(func(title, body string) {
 		a.backend.Dispatch(func() { a.notify(id, title, body) })
 	})
-	view.InitScript(notificationShim + "\n" + iconResolver + "\n" + badgeSniffer)
+	view.InitScript(notificationJS + "\n" + iconResolverJS + "\n" + badgeSnifferJS)
 	view.OnTitleChanged(func(title string) {
 		a.backend.Dispatch(func() { a.onTitle(id, title) })
 	})
