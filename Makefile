@@ -36,8 +36,10 @@ audit: test
 	test -z "$(shell gofmt -l .)"
 	go vet ./...
 	GOOS=windows go vet ./...
+	GOOS=linux go vet ./...
 	go tool $(tools) govulncheck ./...
 	GOOS=windows go build -o /dev/null $(main_package_path)
+	GOOS=linux go build -o /dev/null $(main_package_path)
 	cd tools && go mod tidy -diff
 	cd tools && go mod verify
 
@@ -106,3 +108,16 @@ run: build
 run/debug: build/debug
 	cp bin/$(binary_name)-debug.exe "$(win_temp)/$(binary_name)-debug.exe"
 	"$(win_temp)/$(binary_name)-debug.exe" -debug
+
+# WSLg env for launching from a bare (non-login) shell.
+wslg_env = DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+
+## build/linux: build the Linux binary into bin/
+.PHONY: build/linux
+build/linux: ui
+	GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o bin/$(binary_name) $(main_package_path)
+
+## run/linux: build and launch the Linux build (WSLg-aware) with DevTools
+.PHONY: run/linux
+run/linux: build/linux
+	$(wslg_env) ./bin/$(binary_name) -debug

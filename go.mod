@@ -4,6 +4,8 @@ go 1.27.0
 
 require (
 	github.com/a-h/templ v0.3.1020
+	github.com/ebitengine/purego v0.10.2
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/pietjan/loom v0.0.0-20260802231856-03d8564d5bbf
 	github.com/wailsapp/go-webview2 v1.0.23
 	golang.org/x/image v0.45.0

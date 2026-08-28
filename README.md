@@ -4,12 +4,16 @@ A multi-service messaging browser — WhatsApp, Slack, Discord and friends,
 each in its own isolated OS webview inside one window. Like Rambox or
 Ferdium, but with blackjack and hookers. And without Electron.
 
-- **Go, no cgo.** The whole binary cross-compiles from Linux/WSL2 with
-  `GOOS=windows`. WebView2 is driven through hand-written pure-Go COM
-  bindings (`internal/platform/win/webview2`).
-- **The OS webview.** Windows first (WebView2); the platform layer is a
-  small neutral interface (`internal/platform`), so WebKitGTK and
-  WKWebView backends can follow.
+- **Go, no cgo.** One codebase cross-compiles to Windows and Linux from
+  anywhere. WebView2 is driven through hand-written pure-Go COM bindings
+  (`internal/platform/win/webview2`); GTK4 + WebKitGTK 6.0 through
+  hand-written purego dlopen bindings (`internal/platform/linux/native`).
+- **The OS webview.** WebView2 on Windows, WebKitGTK on Linux — behind
+  one small neutral interface (`internal/platform`); a WKWebView backend
+  can follow. The Linux build needs the runtime libraries only
+  (`libgtk-4-1 libwebkitgtk-6.0-4` on Debian/Ubuntu); tray via
+  StatusNotifierItem (GNOME needs the AppIndicator extension),
+  notifications via org.freedesktop.Notifications.
 - **Sessions are isolated** per service via WebView2 profiles under one
   user data folder.
 - **The shell UI is Go too.** The sidebar is rendered server-side-style
@@ -34,8 +38,10 @@ make help      # list targets
 make ui        # regenerate templ/sqlc code and the embedded stylesheet
 make test      # unit tests (all app logic is platform-neutral and pure)
 make audit     # tidy-diff, verify, vet (linux+windows), govulncheck, cross-build
-make build     # bin/bender.exe (windowsgui)
-make run       # build and launch — works from WSL2 via interop
+make build       # bin/bender.exe (windowsgui)
+make run         # build and launch — works from WSL2 via interop
+make build/linux # bin/bender (GTK4/WebKitGTK)
+make run/linux   # build and launch — works under WSLg too
 ```
 
 `bin/bender-debug.exe` (`make build/debug`) keeps a console attached and
