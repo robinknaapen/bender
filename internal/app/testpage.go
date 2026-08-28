@@ -16,6 +16,7 @@ const testServicePage = `<!DOCTYPE html><html lang="en"><head><meta charset="utf
 	<button onclick="setTimeout(() => notify('delayed notification'), 5000)">
 		Notify in 5s <small>(switch away first)</small></button>
 	<button onclick='document.title = "(" + (Math.floor(Math.random()*98)+1) + ") Test"'>Set badge</button>
+	<button onclick='document.title = "* Test"'>Unread dot</button>
 	<button onclick='document.title = "Test"'>Clear badge</button>
 	<button onclick='window.open("https://example.com")'>Open external link <small>(should hit your browser)</small></button>
 	<small>Notification.permission = <span id="p"></span></small>
