@@ -11,6 +11,7 @@ func TestRoundTrip(t *testing.T) {
 		{"ready", Ready{}},
 		{"activate", Activate{ServiceID: 42}},
 		{"notify", Notify{Title: "WhatsApp", Body: "hello"}},
+		{"badge", BadgeUpdate{Count: 3, Dot: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

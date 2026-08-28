@@ -85,6 +85,14 @@ type Icon struct {
 	URI string `json:"uri"`
 }
 
+// BadgeUpdate reports unread state sniffed from a service page's DOM, for
+// services whose title never reflects unreads (Mattermost). Once a service
+// sends one, DOM state outranks title parsing for that service.
+type BadgeUpdate struct {
+	Count int  `json:"count"`
+	Dot   bool `json:"dot"`
+}
+
 // Encode wraps a message in an Envelope and marshals it. The concrete type
 // of v picks the type tag; passing any other type is a programming error.
 func Encode(v any) (string, error) {
@@ -121,6 +129,8 @@ func Decode(raw string) (any, error) {
 		v = &Notify{}
 	case "icon":
 		v = &Icon{}
+	case "badge":
+		v = &BadgeUpdate{}
 	case "render":
 		v = &Render{}
 	case "open-settings":
@@ -162,6 +172,8 @@ func tagOf(v any) (string, error) {
 		return "notify", nil
 	case Icon:
 		return "icon", nil
+	case BadgeUpdate:
+		return "badge", nil
 	case OpenSettings:
 		return "open-settings", nil
 	case CloseSettings:
@@ -194,6 +206,8 @@ func deref(v any) any {
 	case *Notify:
 		return *m
 	case *Icon:
+		return *m
+	case *BadgeUpdate:
 		return *m
 	case *OpenSettings:
 		return *m

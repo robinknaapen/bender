@@ -32,6 +32,42 @@ const notificationShim = `(() => {
 	window.Notification = ShimNotification;
 })();`
 
+// badgeSniffer is injected into every service webview. Some apps never
+// encode unread state in the document title (Mattermost shows "(n)" only
+// for mentions and nothing at all for plain unreads), so this reads it
+// from their DOM instead. Each reader detects its own app and returns
+// null elsewhere, which keeps the script safe to inject universally —
+// self-hosted instances included, where no preset key or URL can tell us
+// what the service is. State posts only on change; the host retires
+// title-based parsing for a service after its first badge message.
+const badgeSniffer = `(() => {
+	const post = (count, dot) =>
+		window.chrome.webview.postMessage({ type: "badge", data: { count, dot } });
+	const readers = [
+		() => { // Mattermost: unread channels get .unread, mentions a numeric .badge
+			const root = document.getElementById("sidebar-left") || document.getElementById("SidebarContainer");
+			if (!root || !root.querySelector(".SidebarChannel")) return null;
+			let count = 0;
+			for (const b of root.querySelectorAll(".SidebarChannel .badge"))
+				count += parseInt(b.textContent, 10) || 0;
+			const dot = !!root.querySelector(".SidebarChannel.unread, .unread-title");
+			return { count, dot };
+		},
+	];
+	let last = "";
+	const scan = () => {
+		for (const read of readers) {
+			let b = null;
+			try { b = read(); } catch (e) {}
+			if (!b) continue;
+			const key = b.count + ":" + b.dot;
+			if (key !== last) { last = key; post(b.count, b.dot); }
+			return;
+		}
+	};
+	addEventListener("load", () => setInterval(scan, 2000));
+})();`
+
 // iconResolver is injected into every service webview.
 const iconResolver = `/* Icon resolution: pick the page's best static icon and post it as a
    data URI. The web-app manifest usually carries the largest art

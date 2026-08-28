@@ -55,6 +55,10 @@ type App struct {
 	// shimIcon marks services whose icon came from the in-page resolver,
 	// which outranks the coarse WebView2 favicon event.
 	shimIcon map[int64]bool
+	// sniffed marks services whose badge comes from the in-page DOM
+	// sniffer; their titles say nothing about unreads, so title parsing
+	// is retired once the sniffer reports.
+	sniffed  map[int64]bool
 	activeID int64
 	// lastNotifyID is the service behind the pending notification. Only
 	// one balloon can pend at a time (a new one replaces it), so
@@ -75,6 +79,7 @@ func New(backend platform.Backend, st *store.Store, debug bool) *App {
 		rules:    map[int64]badge.Rule{},
 		badges:   map[int64]badge.Badge{},
 		shimIcon: map[int64]bool{},
+		sniffed:  map[int64]bool{},
 		dpi:      96,
 	}
 }
@@ -180,7 +185,7 @@ func (a *App) addServiceView(svc service.Service) error {
 	view.OnNotification(func(title, body string) {
 		a.backend.Dispatch(func() { a.notify(id, title, body) })
 	})
-	view.InitScript(notificationShim + "\n" + iconResolver)
+	view.InitScript(notificationShim + "\n" + iconResolver + "\n" + badgeSniffer)
 	view.OnTitleChanged(func(title string) {
 		a.backend.Dispatch(func() { a.onTitle(id, title) })
 	})
@@ -276,6 +281,14 @@ func (a *App) onServiceMessage(id int64, raw string) {
 		// Page-resolved icons beat the coarse WebView2 favicon.
 		a.shimIcon[id] = true
 		a.saveIcon(id, []byte(m.URI))
+	case bridge.BadgeUpdate:
+		a.sniffed[id] = true
+		next := badge.Badge{Count: m.Count, Dot: m.Dot}
+		if next == a.badges[id] {
+			return
+		}
+		a.badges[id] = next
+		a.renderChrome()
 	}
 }
 
@@ -344,7 +357,7 @@ func (a *App) saveIcon(id int64, icon []byte) {
 
 func (a *App) onTitle(id int64, title string) {
 	rule, ok := a.rules[id]
-	if !ok {
+	if !ok || a.sniffed[id] {
 		return
 	}
 	next, changed := badge.Parse(rule, a.badges[id], title)
@@ -625,6 +638,8 @@ func (a *App) reload(ctx context.Context) error {
 			delete(a.views, id)
 			delete(a.badges, id)
 			delete(a.rules, id)
+			delete(a.shimIcon, id)
+			delete(a.sniffed, id)
 		}
 	}
 	if _, ok := current[a.activeID]; !ok && len(a.services) > 0 {
