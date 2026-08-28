@@ -131,3 +131,16 @@ build/linux: ui
 .PHONY: run/linux
 run/linux: build/linux
 	$(wslg_env) ./bin/$(binary_name) -debug
+
+## install/linux: install binary, desktop entry, and icons system-wide (sudo)
+# System paths matter under WSLg: its compositor resolves taskbar icons
+# only from /usr/share/pixmaps and /usr/share/icons/hicolor/{16..128}.
+.PHONY: install/linux
+install/linux: build/linux
+	sudo install -Dm755 bin/$(binary_name) /usr/local/bin/$(binary_name)
+	sudo install -Dm644 cmd/bender/winres/icon.png /usr/share/pixmaps/$(binary_name).png
+	sudo install -Dm644 cmd/bender/winres/icon48.png /usr/share/icons/hicolor/48x48/apps/$(binary_name).png
+	sudo install -Dm644 cmd/bender/winres/icon32.png /usr/share/icons/hicolor/32x32/apps/$(binary_name).png
+	sudo install -Dm644 cmd/bender/winres/icon16.png /usr/share/icons/hicolor/16x16/apps/$(binary_name).png
+	sudo install -Dm644 cmd/bender/winres/icon.png /usr/share/icons/hicolor/256x256/apps/$(binary_name).png
+	printf '[Desktop Entry]\nType=Application\nName=Bender\nComment=Multi-service messaging browser\nExec=/usr/local/bin/$(binary_name)\nIcon=$(binary_name)\nCategories=Network;InstantMessaging;\nStartupWMClass=$(binary_name)\n' | sudo tee /usr/share/applications/$(binary_name).desktop > /dev/null
