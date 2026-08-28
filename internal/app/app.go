@@ -531,6 +531,12 @@ func (a *App) removeService(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("the test service cannot be removed")
 	}
+	// Removal is permanent: take the browsing profile (cookies, logins)
+	// with it. The mark takes effect when reload closes the webview.
+	// Disabling a service keeps the profile, by contrast.
+	if view, ok := a.views[id]; ok {
+		view.DeleteProfile()
+	}
 	if err := a.store.DeleteService(ctx, id); err != nil {
 		return err
 	}

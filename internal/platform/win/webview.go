@@ -200,6 +200,15 @@ func (v *WebView) Focus() {
 	}
 }
 
+func (v *WebView) DeleteProfile() {
+	if v.closed {
+		return
+	}
+	if err := v.core.DeleteProfile(); err != nil {
+		log.Printf("win: delete profile: %v", err)
+	}
+}
+
 func (v *WebView) Close() {
 	if v.closed {
 		return

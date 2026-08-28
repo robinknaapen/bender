@@ -93,6 +93,10 @@ type WebView interface {
 	SetBounds(Rect)
 	SetVisible(bool)
 	Focus()
+	// DeleteProfile marks this webview's browsing profile (cookies,
+	// storage) for removal from disk; it takes effect when the profile's
+	// webviews close. Best-effort — unsupported backends keep the data.
+	DeleteProfile()
 	// Close releases the webview and flushes its session to disk.
 	Close()
 }

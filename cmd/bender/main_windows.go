@@ -71,7 +71,13 @@ func run() error {
 		return fmt.Errorf("seed store: %w", err)
 	}
 
-	backend, err := win.New(filepath.Join(dataDir, "webview2"), *debug)
+	// Selftests add/remove services (deleting profiles with them); keep
+	// their browser data away from the real profiles too.
+	webviewData := filepath.Join(dataDir, "webview2")
+	if *selftest {
+		webviewData = filepath.Join(dataDir, "selftest-webview2")
+	}
+	backend, err := win.New(webviewData, *debug)
 	if err != nil {
 		return err
 	}
