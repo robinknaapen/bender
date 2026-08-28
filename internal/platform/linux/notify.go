@@ -5,6 +5,7 @@ package linux
 import (
 	"image"
 	"log"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 
@@ -13,10 +14,13 @@ import (
 
 // notifier speaks org.freedesktop.Notifications. One toast pends at a
 // time (each Notify replaces the last), matching the Windows balloon
-// semantics the app's last-notifier tracking assumes.
+// semantics the app's last-notifier tracking assumes. All bus calls run
+// off the UI thread: a hung daemon (misconfigured activation) must
+// never stall the app.
 type notifier struct {
 	backend *Backend
 	conn    *dbus.Conn
+	mu      sync.Mutex
 	lastID  uint32
 	onClick func()
 }
@@ -38,7 +42,10 @@ func newNotifier(b *Backend, conn *dbus.Conn) *notifier {
 				continue
 			}
 			id, _ := sig.Body[0].(uint32)
-			if id == n.lastID && n.onClick != nil {
+			n.mu.Lock()
+			match := id == n.lastID
+			n.mu.Unlock()
+			if match && n.onClick != nil {
 				// DBus goroutine → UI thread.
 				b.Dispatch(n.onClick)
 			}
@@ -68,13 +75,25 @@ func (n *notifier) notify(title, body string, icon image.Image) {
 			Pixels                []byte
 		}{w, h, stride, alpha, bits, channels, pix})
 	}
-	obj := n.conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
-	call := obj.Call("org.freedesktop.Notifications.Notify", 0,
-		"Bender", n.lastID, "", title, body,
-		[]string{"default", "Open"}, hints, int32(-1))
-	if call.Err != nil {
-		log.Printf("linux: notify: %v", call.Err)
-		return
-	}
-	call.Store(&n.lastID)
+	// Off the UI thread: a synchronous Call would freeze the app for the
+	// full DBus timeout whenever the daemon hangs.
+	go func() {
+		n.mu.Lock()
+		replaces := n.lastID
+		n.mu.Unlock()
+		obj := n.conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
+		call := obj.Call("org.freedesktop.Notifications.Notify", 0,
+			"Bender", replaces, "", title, body,
+			[]string{"default", "Open"}, hints, int32(-1))
+		if call.Err != nil {
+			log.Printf("linux: notify: %v", call.Err)
+			return
+		}
+		var id uint32
+		if call.Store(&id) == nil {
+			n.mu.Lock()
+			n.lastID = id
+			n.mu.Unlock()
+		}
+	}()
 }
