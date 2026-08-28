@@ -82,6 +82,16 @@ ui: generate
 # OPERATIONS
 # ==================================================================================== #
 
+.PHONY: release/version
+release/version:
+	@echo '$(version)' | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$$' || { echo 'usage: make release version=vX.Y.Z'; exit 1; }
+
+## release: tag and push a release, e.g. make release version=v0.1.0
+.PHONY: release
+release: release/version no-dirty audit confirm
+	git tag -a $(version) -m '$(version)'
+	git push origin $(version)
+
 ## build: build the Windows binary into bin/
 .PHONY: build
 build: ui
