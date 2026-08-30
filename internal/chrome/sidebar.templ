@@ -68,6 +68,17 @@ templ sidebar(state State) {
 			}
 		}
 	</div>
+	// The content view is a rectangular native surface; the overlay
+	// rounds its top-left corner by painting an inverted corner over
+	// it — chrome-colored, with a transparent quarter circle. Purely
+	// visual: it sits outside the input regions, so the pointer never
+	// notices.
+	<div
+		class={ "pointer-events-none fixed top-0 size-3",
+			templ.KV("left-14", state.Collapsed), templ.KV("left-[220px]", !state.Collapsed),
+			"bg-[radial-gradient(circle_at_100%_100%,transparent_11px,#fafafa_12px)]",
+			"dark:bg-[radial-gradient(circle_at_100%_100%,transparent_11px,#18181b_12px)]" }
+	></div>
 }
 
 // itemIcon is a service's rail presence: icon (or initials) plus the
