@@ -7,32 +7,29 @@ import (
 	"github.com/pietjan/loom/badge"
 	"github.com/pietjan/loom/icon"
 	"github.com/pietjan/loom/navlist"
+	"github.com/pietjan/loom/tooltip"
 )
 
 // sidebar is the service switcher. Items carry their bridge message in
 // data-msg for the glue script's delegated click handler; hrefs are inert.
 // Collapsed, it renders an icons-only rail with badge bubbles overlaid.
+// The rail paints its own strip: as a full-window overlay the page body
+// is transparent, so width and background live here and must match the
+// app's SidebarDIP / SidebarCollapsedDIP input regions.
 templ sidebar(state State) {
-	<div class="flex h-full flex-col justify-between">
+	<div class={ "fixed inset-y-0 left-0 flex flex-col justify-between p-2",
+		"bg-base-100/10 dark:bg-base-900",
+		templ.KV("w-14", state.Collapsed), templ.KV("w-[220px]", !state.Collapsed) }>
 		@navlist.New(navlist.Label("Services")) {
 			for _, item := range state.Items {
 				@navlist.Item("#", itemOptions(state, item)...) {
-					<span class="relative shrink-0">
-						if len(item.Icon) > 0 {
-							<img src={ iconURI(item.Icon) } alt="" class="size-6 rounded"/>
-						} else {
-							@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+					if state.Collapsed {
+						@tooltip.New(tooltip.Text(item.Name), tooltip.Right()) {
+							@itemIcon(state, item)
 						}
-						if state.Collapsed && !item.Badge.Zero() {
-							@badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Solid(), badge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")) {
-								if item.Badge.Count > 0 {
-									{ badgeCount(item.Badge.Count) }
-								} else {
-									{ "•" }
-								}
-							}
-						}
-					</span>
+					} else {
+						@itemIcon(state, item)
+					}
 					if !state.Collapsed {
 						<span class="truncate">{ item.Name }</span>
 						if item.Badge.Count > 0 {
@@ -51,20 +48,47 @@ templ sidebar(state State) {
 		@navlist.New(navlist.Label("App")) {
 			@navlist.Item("#", toggleOptions(state)...) {
 				if state.Collapsed {
-					@icon.New(icon.CaretRight, icon.Small)
+					@tooltip.New(tooltip.Text("Expand"), tooltip.Right()) {
+						@icon.New(icon.CaretRight, icon.Small)
+					}
 				} else {
 					@icon.New(icon.CaretLeft, icon.Small)
 					<span>Collapse</span>
 				}
 			}
 			@navlist.Item("#", settingsOptions(state)...) {
-				@icon.New(icon.GearSix, icon.Small)
-				if !state.Collapsed {
+				if state.Collapsed {
+					@tooltip.New(tooltip.Text("Settings"), tooltip.Right()) {
+						@icon.New(icon.GearSix, icon.Small)
+					}
+				} else {
+					@icon.New(icon.GearSix, icon.Small)
 					<span>Settings</span>
 				}
 			}
 		}
 	</div>
+}
+
+// itemIcon is a service's rail presence: icon (or initials) plus the
+// collapsed-mode badge bubble.
+templ itemIcon(state State, item Item) {
+	<span class="relative shrink-0">
+		if len(item.Icon) > 0 {
+			<img src={ iconURI(item.Icon) } alt="" class="size-6 rounded"/>
+		} else {
+			@avatar.New(avatar.Initials(initials(item.Name)), avatar.Alt(item.Name), avatar.Small)
+		}
+		if state.Collapsed && !item.Badge.Zero() {
+			@badge.New(badge.Rose, badge.Pill(), badge.Small, badge.Solid(), badge.Class("absolute -top-1 -right-1 z-10 h-4 min-w-4 justify-center px-1 py-0 text-[10px] leading-none")) {
+				if item.Badge.Count > 0 {
+					{ badgeCount(item.Badge.Count) }
+				} else {
+					{ "•" }
+				}
+			}
+		}
+	</span>
 }
 
 // badgeCount keeps overlay bubbles narrow.
@@ -79,7 +103,6 @@ func itemOptions(state State, item Item) []navlist.Option {
 	options := []navlist.Option{
 		navlist.Attr("data-msg", msgAttr("activate", map[string]any{"serviceId": item.ID})),
 		navlist.Attr("data-service-id", fmt.Sprint(item.ID)),
-		navlist.Attr("title", item.Name),
 	}
 	if state.Collapsed {
 		options = append(options, navlist.Class("justify-center"))
@@ -95,9 +118,7 @@ func toggleOptions(state State) []navlist.Option {
 		navlist.Attr("data-msg", msgAttr("toggle-sidebar", nil)),
 	}
 	if state.Collapsed {
-		options = append(options, navlist.Class("justify-center"), navlist.Attr("title", "Expand"))
-	} else {
-		options = append(options, navlist.Attr("title", "Collapse"))
+		options = append(options, navlist.Class("justify-center"))
 	}
 	return options
 }
@@ -105,7 +126,6 @@ func toggleOptions(state State) []navlist.Option {
 func settingsOptions(state State) []navlist.Option {
 	options := []navlist.Option{
 		navlist.Attr("data-msg", msgAttr("open-settings", nil)),
-		navlist.Attr("title", "Settings"),
 	}
 	if state.Collapsed {
 		options = append(options, navlist.Class("justify-center"))

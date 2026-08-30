@@ -5,10 +5,26 @@
 (() => {
 	const host = window.chrome.webview;
 	const mount = document.getElementById("mount");
+	const modal = document.getElementById("modal-mount");
 
 	host.addEventListener("message", (e) => {
 		const m = e.data;
-		if (m && m.type === "render") mount.innerHTML = m.data.html;
+		if (!m) return;
+		if (m.type === "render") mount.innerHTML = m.data.html;
+		if (m.type === "render-modal") modal.innerHTML = m.data.html;
+	});
+
+	// Modal conveniences the markup can't express: Esc and clicking the
+	// backdrop itself (not its children) dismiss.
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && modal.childElementCount > 0) {
+			host.postMessage({ type: "close-settings" });
+		}
+	});
+	document.addEventListener("mousedown", (e) => {
+		if (e.target.id === "modal-backdrop") {
+			host.postMessage({ type: "close-settings" });
+		}
 	});
 
 	document.addEventListener("click", (e) => {

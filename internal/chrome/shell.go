@@ -20,7 +20,9 @@ func Shell() string {
 	var b strings.Builder
 	b.WriteString(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>bender</title><style>`)
 	b.WriteString(styles)
-	b.WriteString(`</style></head><body class="bg-base-100/10 text-base-800 dark:bg-base-900 dark:text-base-100 select-none"><div id="mount" class="h-screen overflow-y-auto p-2"></div><script>`)
+	// The body stays transparent: as an overlay the chrome covers the
+	// whole window and only the rail and modal layers paint pixels.
+	b.WriteString(`</style></head><body class="text-base-800 dark:text-base-100 select-none"><div id="mount"></div><div id="modal-mount"></div><script>`)
 	b.WriteString(glue)
 	b.WriteString(`</script></body></html>`)
 	return b.String()

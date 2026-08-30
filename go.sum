@@ -24,8 +24,8 @@ github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsRe
 github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
 github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOFAw7w=
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
-github.com/pietjan/loom v0.0.0-20260802231856-03d8564d5bbf h1:LP+P0C0atqTo7e5ENW6+g9ZWhjC7YehZ8/Pz741BwJ4=
-github.com/pietjan/loom v0.0.0-20260802231856-03d8564d5bbf/go.mod h1:wZx+ZB2sssi97225Q6aqsN6v0cb5b3Ch39ReE2VkhdE=
+github.com/pietjan/loom v0.0.0-20260830224512-a2c46f093c2a h1:19+gulOuAeaoerMtQCA3SAWk/nyu9jEYIJtgMGaqj6Q=
+github.com/pietjan/loom v0.0.0-20260830224512-a2c46f093c2a/go.mod h1:wZx+ZB2sssi97225Q6aqsN6v0cb5b3Ch39ReE2VkhdE=
 github.com/pietjan/spectacle v0.0.0-20260830223625-4f079062b1cf h1:2ShZ7klRB6rzhLC+n5NzMSOA3AQ0HD3VP373PkKvVAo=
 github.com/pietjan/spectacle v0.0.0-20260830223625-4f079062b1cf/go.mod h1:stdBDa1XKqmrGa27SpRuibvyOnd6Z6BcyQvw8eA576E=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

@@ -40,10 +40,14 @@ type App struct {
 	debug    bool
 	selftest bool
 
-	win      spectacle.Window
-	chrome   spectacle.WebView
-	settings spectacle.WebView // lazily created on first open
-	views    map[int64]spectacle.WebView
+	win    spectacle.Window
+	chrome spectacle.WebView
+	views  map[int64]spectacle.WebView
+	// overlayChrome: the chrome webview is a full-window transparent
+	// overlay (input limited to the rail; expanded while the settings
+	// modal is open). Without backend overlay support the chrome is a
+	// plain rail-sized view that grows to full window for settings.
+	overlayChrome bool
 
 	settingsOpen bool
 	settingsErr  string
@@ -135,7 +139,12 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	})
 
-	a.chrome, err = a.backend.NewWebView(a.win, "")
+	var chromeOpts []spectacle.WebViewOption
+	if a.backend.SupportsOverlay() {
+		a.overlayChrome = true
+		chromeOpts = append(chromeOpts, spectacle.Overlay())
+	}
+	a.chrome, err = a.backend.NewWebView(a.win, "", chromeOpts...)
 	if err != nil {
 		return err
 	}
@@ -147,16 +156,6 @@ func (a *App) Run(ctx context.Context) error {
 		a.backend.Dispatch(func() { a.onChromeMessage(ctx, raw) })
 	})
 	a.chrome.NavigateHTML(chrome.Shell())
-
-	a.settings, err = a.backend.NewWebView(a.win, "")
-	if err != nil {
-		return err
-	}
-	a.settings.OnMessage(func(raw string) {
-		a.backend.Dispatch(func() { a.onSettingsMessage(ctx, raw) })
-	})
-	a.settings.SetVisible(false)
-	a.settings.NavigateHTML(chrome.Shell())
 
 	for _, svc := range a.services {
 		if err := a.addServiceView(svc); err != nil {
@@ -206,7 +205,7 @@ func (a *App) addServiceView(svc service.Service) error {
 		a.backend.OpenURL(url)
 		return true
 	})
-	visible := id == a.activeID && !a.settingsOpen
+	visible := id == a.activeID
 	view.SetVisible(visible)
 	view.SetMemoryTargetLow(!visible)
 	if svc.URL == "" {
@@ -220,16 +219,28 @@ func (a *App) addServiceView(svc service.Service) error {
 
 // applyLayout positions the chrome and every content view. Hidden views
 // get the content bounds too, so switching never shows a stale size.
+// The overlay chrome always spans the window; its input regions decide
+// what it owns — the rail, plus everything while the settings modal is
+// open. The windowed fallback resizes the chrome itself instead.
 func (a *App) applyLayout() {
 	if a.width == 0 || a.height == 0 {
 		return
 	}
 	l := ComputeLayout(a.width, a.height, a.dpi, a.collapsed)
-	if a.chrome != nil {
+	full := spectacle.Rect{W: a.width, H: a.height}
+	switch {
+	case a.chrome == nil:
+	case a.overlayChrome:
+		a.chrome.SetBounds(full)
+		if a.settingsOpen {
+			a.chrome.SetInputRegions([]spectacle.Rect{full})
+		} else {
+			a.chrome.SetInputRegions([]spectacle.Rect{l.Sidebar})
+		}
+	case a.settingsOpen:
+		a.chrome.SetBounds(full)
+	default:
 		a.chrome.SetBounds(l.Sidebar)
-	}
-	if a.settings != nil {
-		a.settings.SetBounds(l.Content)
 	}
 	for _, v := range a.views {
 		v.SetBounds(l.Content)
@@ -250,6 +261,23 @@ func (a *App) onChromeMessage(ctx context.Context, raw string) {
 		a.activate(ctx, m.ServiceID)
 	case bridge.OpenSettings:
 		a.openSettings(ctx)
+	case bridge.CloseSettings:
+		a.closeSettings()
+	case bridge.AddService:
+		a.settingsErr = errText(a.addService(ctx, m))
+		a.renderSettings(ctx)
+	case bridge.RemoveService:
+		a.settingsErr = errText(a.removeService(ctx, m.ServiceID))
+		a.renderSettings(ctx)
+	case bridge.ToggleService:
+		a.settingsErr = errText(a.toggleService(ctx, m))
+		a.renderSettings(ctx)
+	case bridge.MoveService:
+		a.settingsErr = errText(a.moveService(ctx, m))
+		a.renderSettings(ctx)
+	case bridge.SetBadgeRegex:
+		a.settingsErr = errText(a.setBadgeRegex(ctx, m))
+		a.renderSettings(ctx)
 	case bridge.ToggleSidebar:
 		a.collapsed = !a.collapsed
 		a.applyLayout()
@@ -439,66 +467,31 @@ func (a *App) serviceByID(id int64) (service.Service, bool) {
 	return service.Service{}, false
 }
 
-// openSettings shows the settings view.
+// openSettings opens the settings modal on the chrome layer. The active
+// service keeps running underneath — the backdrop dims it.
 func (a *App) openSettings(ctx context.Context) {
 	if a.settingsOpen {
 		return
 	}
-	if active, ok := a.views[a.activeID]; ok {
-		active.SetVisible(false)
-		active.SetMemoryTargetLow(true)
-	}
-	a.settings.Resume()
-	a.settings.SetVisible(true)
-	a.settings.Focus()
 	a.settingsOpen = true
+	a.settingsErr = ""
+	a.applyLayout()
 	a.renderChrome()
 	a.renderSettings(ctx)
+	a.chrome.Focus()
 }
 
-// closeSettings hides the settings view and restores the active service.
+// closeSettings dismisses the modal and hands focus back to the service.
 func (a *App) closeSettings() {
 	if !a.settingsOpen {
 		return
 	}
-	a.settings.SetVisible(false)
-	// Nothing runs in the background of the settings page; sleep it.
-	a.settings.Suspend()
-	if active, ok := a.views[a.activeID]; ok {
-		active.SetMemoryTargetLow(false)
-		active.SetVisible(true)
-		active.Focus()
-	}
 	a.settingsOpen = false
+	a.applyLayout()
 	a.renderChrome()
-}
-
-func (a *App) onSettingsMessage(ctx context.Context, raw string) {
-	msg, err := bridge.Decode(raw)
-	if err != nil {
-		log.Printf("settings: %v", err)
-		return
-	}
-	switch m := msg.(type) {
-	case bridge.Ready:
-		a.renderSettings(ctx)
-	case bridge.CloseSettings:
-		a.closeSettings()
-	case bridge.AddService:
-		a.settingsErr = errText(a.addService(ctx, m))
-	case bridge.RemoveService:
-		a.settingsErr = errText(a.removeService(ctx, m.ServiceID))
-	case bridge.ToggleService:
-		a.settingsErr = errText(a.toggleService(ctx, m))
-	case bridge.MoveService:
-		a.settingsErr = errText(a.moveService(ctx, m))
-	case bridge.SetBadgeRegex:
-		a.settingsErr = errText(a.setBadgeRegex(ctx, m))
-	default:
-		return
-	}
-	if _, isReady := msg.(bridge.Ready); !isReady {
-		a.renderSettings(ctx)
+	a.postModal("")
+	if active, ok := a.views[a.activeID]; ok {
+		active.Focus()
 	}
 }
 
@@ -657,8 +650,11 @@ func (a *App) reload(ctx context.Context) error {
 	return nil
 }
 
+// renderSettings renders the settings modal into the chrome overlay
+// mount. Separate from renderChrome so rail updates (badges) never
+// clobber form fields mid-edit.
 func (a *App) renderSettings(ctx context.Context) {
-	if a.settings == nil {
+	if !a.settingsOpen {
 		return
 	}
 	state, err := a.settingsState(ctx)
@@ -671,12 +667,16 @@ func (a *App) renderSettings(ctx context.Context) {
 		log.Printf("settings: render: %v", err)
 		return
 	}
-	msg, err := bridge.Encode(bridge.Render{HTML: html})
+	a.postModal(html)
+}
+
+func (a *App) postModal(html string) {
+	msg, err := bridge.Encode(bridge.RenderModal{HTML: html})
 	if err != nil {
 		log.Printf("settings: encode: %v", err)
 		return
 	}
-	a.settings.PostJSON(msg)
+	a.chrome.PostJSON(msg)
 }
 
 func (a *App) settingsState(ctx context.Context) (chrome.SettingsState, error) {
@@ -768,9 +768,6 @@ func (a *App) shutdown(ctx context.Context) {
 		v.Close()
 	}
 	a.chrome.Close()
-	if a.settings != nil {
-		a.settings.Close()
-	}
 	a.backend.Quit()
 }
 

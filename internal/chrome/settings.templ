@@ -18,7 +18,9 @@ import (
 // with their controls, and the add-service forms. All interactions go
 // through data-msg / data-msg-type; the page holds no state of its own.
 templ settings(state SettingsState) {
-	<div class="mx-auto flex max-w-3xl flex-col gap-8 p-8">
+	<div id="modal-backdrop" class="fixed inset-0 z-40 flex items-center justify-center bg-base-900/60 p-6">
+		<div class="max-h-full w-full max-w-3xl overflow-y-auto rounded-xl border border-base-800/10 bg-base-50 shadow-2xl dark:border-base-100/10 dark:bg-base-900">
+			<div class="flex flex-col gap-8 p-8">
 		<div class="flex items-center justify-between">
 			@heading.New() {
 				Settings
@@ -127,11 +129,13 @@ templ settings(state SettingsState) {
 				</div>
 			</form>
 		</section>
-		<footer class="flex justify-center border-t border-base-800/10 pt-4 dark:border-base-100/10">
-			@text.New(text.Small, text.Subtle) {
-				{ versionLine() }
-			}
-		</footer>
+				<footer class="flex justify-center border-t border-base-800/10 pt-4 dark:border-base-100/10">
+					@text.New(text.Small, text.Subtle) {
+						{ versionLine() }
+					}
+				</footer>
+			</div>
+		</div>
 	</div>
 }
 

@@ -22,6 +22,12 @@ type Render struct {
 	HTML string `json:"html"`
 }
 
+// RenderModal carries the modal layer (the settings dialog) for the
+// chrome page's overlay mount. Empty HTML clears it.
+type RenderModal struct {
+	HTML string `json:"html"`
+}
+
 // Chrome → Go.
 
 // Ready signals that the chrome page has loaded and wants its first Render.
@@ -164,6 +170,8 @@ func tagOf(v any) (string, error) {
 	switch v.(type) {
 	case Render:
 		return "render", nil
+	case RenderModal:
+		return "render-modal", nil
 	case Ready:
 		return "ready", nil
 	case Activate:
