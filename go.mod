@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/a-h/templ v0.3.1020
 	github.com/pietjan/loom v0.0.0-20260802231856-03d8564d5bbf
-	github.com/pietjan/spectacle v0.0.0-00010101000000-000000000000
+	github.com/pietjan/spectacle v0.0.0-20260830110636-301ad3322871
 	golang.org/x/image v0.45.0
 	modernc.org/sqlite v1.57.0
 )
@@ -27,5 +27,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace github.com/pietjan/spectacle => ../spectacle
