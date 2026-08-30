@@ -1,6 +1,6 @@
-// Package appicon holds bender's application icon, shared by the
-// platform backends (Windows AUMID registration, Linux tray pixmaps and
-// notification fallback). Swap appicon.png to change the art.
+// Package appicon holds bender's application icon, passed to spectacle
+// (AUMID registration, tray pixmaps, notification fallback) at startup.
+// Swap appicon.png to change the art.
 package appicon
 
 import (

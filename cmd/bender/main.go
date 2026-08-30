@@ -1,5 +1,3 @@
-//go:build linux
-
 // Command bender is a multi-service messaging browser: each service runs
 // in its own isolated OS webview inside one window.
 package main
@@ -14,13 +12,16 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/pietjan/spectacle"
+
 	"github.com/pietjan/bender/internal/app"
-	"github.com/pietjan/bender/internal/platform/linux"
+	"github.com/pietjan/bender/internal/appicon"
 	"github.com/pietjan/bender/internal/store"
 )
 
 func main() {
-	// The entire UI — GTK, WebKit, GLib main loop — lives on this thread.
+	// The entire UI — native toolkit, webviews, event loop — lives on
+	// this one thread.
 	runtime.LockOSThread()
 	if err := run(); err != nil {
 		log.Printf("bender: %v", err)
@@ -34,6 +35,7 @@ func run() error {
 	dbPath := flag.String("db", "", "database path (default: user config dir)")
 	flag.Parse()
 
+	// Browser profiles and logs are per-machine data, not roaming config.
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return err
@@ -42,6 +44,8 @@ func run() error {
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return err
 	}
+	// Windows -H=windowsgui builds have no console; keep a log file.
+	// Console builds (make build/debug) additionally keep stderr.
 	if f, err := os.OpenFile(filepath.Join(dataDir, "bender.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644); err == nil {
 		log.SetOutput(io.MultiWriter(f, os.Stderr))
 		defer f.Close()
@@ -68,13 +72,26 @@ func run() error {
 		return fmt.Errorf("seed store: %w", err)
 	}
 
+	// The per-OS names predate the spectacle split; existing profiles
+	// (logged-in sessions) live under them, so they stay.
+	sub := "webkit"
+	if runtime.GOOS == "windows" {
+		sub = "webview2"
+	}
 	// Selftests add/remove services (deleting profiles with them); keep
 	// their browser data away from the real profiles too.
-	webviewData := filepath.Join(dataDir, "webkit")
 	if *selftest {
-		webviewData = filepath.Join(dataDir, "selftest-webkit")
+		sub = "selftest-" + sub
 	}
-	backend, err := linux.New(webviewData, *debug)
+	backend, err := spectacle.New(spectacle.Config{
+		ID:         "bender",
+		Name:       "Bender",
+		Comment:    "Multi-service messaging browser",
+		Categories: "Network;InstantMessaging;",
+		Icon:       appicon.PNG,
+		DataDir:    filepath.Join(dataDir, sub),
+		Debug:      *debug,
+	})
 	if err != nil {
 		return err
 	}

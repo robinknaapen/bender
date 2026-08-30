@@ -1,6 +1,6 @@
 package app
 
-import "github.com/pietjan/bender/internal/platform"
+import "github.com/pietjan/spectacle"
 
 // Sidebar widths in device-independent pixels.
 const (
@@ -10,8 +10,8 @@ const (
 
 // Layout places the chrome and the active service inside the client area.
 type Layout struct {
-	Sidebar platform.Rect
-	Content platform.Rect
+	Sidebar spectacle.Rect
+	Content spectacle.Rect
 }
 
 // ComputeLayout splits a client area of w×h physical pixels at dpi into
@@ -29,7 +29,7 @@ func ComputeLayout(w, h, dpi int, collapsed bool) Layout {
 		sw = w
 	}
 	return Layout{
-		Sidebar: platform.Rect{X: 0, Y: 0, W: sw, H: h},
-		Content: platform.Rect{X: sw, Y: 0, W: w - sw, H: h},
+		Sidebar: spectacle.Rect{X: 0, Y: 0, W: sw, H: h},
+		Content: spectacle.Rect{X: sw, Y: 0, W: w - sw, H: h},
 	}
 }

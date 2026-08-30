@@ -5,11 +5,12 @@ each in its own isolated OS webview inside one window. Like Rambox or
 Ferdium, but with blackjack and hookers. And without Electron.
 
 - **Go, no cgo.** One codebase cross-compiles to Windows and Linux from
-  anywhere. WebView2 is driven through hand-written pure-Go COM bindings
-  (`internal/platform/win/webview2`); GTK4 + WebKitGTK 6.0 through
-  hand-written purego dlopen bindings (`internal/platform/linux/native`).
+  anywhere. WebView2 is driven through hand-written pure-Go COM bindings; GTK4 +
+  WebKitGTK 6.0 through hand-written purego dlopen bindings — both live
+  in [spectacle](https://github.com/pietjan/spectacle), the extracted
+  webview-shell library.
 - **The OS webview.** WebView2 on Windows, WebKitGTK on Linux — behind
-  one small neutral interface (`internal/platform`); a WKWebView backend
+  one small neutral interface (`spectacle.Backend`); a WKWebView backend
   can follow. The Linux build needs the runtime libraries only
   (`libgtk-4-1 libwebkitgtk-6.0-4` on Debian/Ubuntu); tray via
   StatusNotifierItem (GNOME needs the AppIndicator extension),

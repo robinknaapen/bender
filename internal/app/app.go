@@ -22,9 +22,9 @@ import (
 	"github.com/pietjan/bender/internal/badge"
 	"github.com/pietjan/bender/internal/bridge"
 	"github.com/pietjan/bender/internal/chrome"
-	"github.com/pietjan/bender/internal/platform"
 	"github.com/pietjan/bender/internal/service"
 	"github.com/pietjan/bender/internal/store"
+	"github.com/pietjan/spectacle"
 )
 
 const (
@@ -35,15 +35,15 @@ const (
 
 // App is the running application. All methods run on the UI thread.
 type App struct {
-	backend  platform.Backend
+	backend  spectacle.Backend
 	store    *store.Store
 	debug    bool
 	selftest bool
 
-	win      platform.Window
-	chrome   platform.WebView
-	settings platform.WebView // lazily created on first open
-	views    map[int64]platform.WebView
+	win      spectacle.Window
+	chrome   spectacle.WebView
+	settings spectacle.WebView // lazily created on first open
+	views    map[int64]spectacle.WebView
 
 	settingsOpen bool
 	settingsErr  string
@@ -70,12 +70,12 @@ type App struct {
 
 // New assembles the app. Call Run to start it. debug adds the built-in
 // Test service for exercising notifications and badges.
-func New(backend platform.Backend, st *store.Store, debug bool) *App {
+func New(backend spectacle.Backend, st *store.Store, debug bool) *App {
 	return &App{
 		backend:  backend,
 		store:    st,
 		debug:    debug,
-		views:    map[int64]platform.WebView{},
+		views:    map[int64]spectacle.WebView{},
 		rules:    map[int64]badge.Rule{},
 		badges:   map[int64]badge.Badge{},
 		shimIcon: map[int64]bool{},
@@ -122,7 +122,7 @@ func (a *App) Run(ctx context.Context) error {
 		return false
 	})
 	tray.SetTooltip("Bender")
-	tray.SetMenu([]platform.MenuItem{
+	tray.SetMenu([]spectacle.MenuItem{
 		{Label: "Show Bender", OnClick: a.win.Show},
 		{},
 		{Label: "Quit", OnClick: func() { a.shutdown(ctx) }},
@@ -742,8 +742,8 @@ type geometry struct {
 	X, Y, W, H int
 }
 
-func (a *App) restoreGeometry(ctx context.Context) platform.Rect {
-	fallback := platform.Rect{X: 100, Y: 100, W: 1280, H: 800}
+func (a *App) restoreGeometry(ctx context.Context) spectacle.Rect {
+	fallback := spectacle.Rect{X: 100, Y: 100, W: 1280, H: 800}
 	raw, err := a.store.GetSetting(ctx, settingGeometry)
 	if err != nil {
 		return fallback
@@ -752,7 +752,7 @@ func (a *App) restoreGeometry(ctx context.Context) platform.Rect {
 	if json.Unmarshal([]byte(raw), &g) != nil || g.W <= 0 || g.H <= 0 {
 		return fallback
 	}
-	return platform.Rect{X: g.X, Y: g.Y, W: g.W, H: g.H}
+	return spectacle.Rect{X: g.X, Y: g.Y, W: g.W, H: g.H}
 }
 
 // shutdown persists state, releases the webviews so their sessions flush,
