@@ -344,10 +344,9 @@ func sidebar(state State) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var17 = []any{"pointer-events-none fixed top-0 size-3",
+		var templ_7745c5c3_Var17 = []any{"pointer-events-none fixed top-0 size-3 bg-base-50 dark:bg-base-900",
 			templ.KV("left-14", state.Collapsed), templ.KV("left-[220px]", !state.Collapsed),
-			"bg-[radial-gradient(circle_at_100%_100%,transparent_11px,#fafafa_12px)]",
-			"dark:bg-[radial-gradient(circle_at_100%_100%,transparent_11px,#18181b_12px)]"}
+			"[mask-image:radial-gradient(circle_at_100%_100%,transparent_11px,black_12px)]"}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var17...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -408,7 +407,7 @@ func itemIcon(state State, item Item) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURI(item.Icon))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 89, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 88, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 			if templ_7745c5c3_Err != nil {
@@ -441,7 +440,7 @@ func itemIcon(state State, item Item) templ.Component {
 					var templ_7745c5c3_Var22 string
 					templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(badgeCount(item.Badge.Count))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 96, Col: 35}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 95, Col: 35}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 					if templ_7745c5c3_Err != nil {
@@ -451,7 +450,7 @@ func itemIcon(state State, item Item) templ.Component {
 					var templ_7745c5c3_Var23 string
 					templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs("•")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 98, Col: 12}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `sidebar.templ`, Line: 97, Col: 12}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 					if templ_7745c5c3_Err != nil {
