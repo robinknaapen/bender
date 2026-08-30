@@ -2,7 +2,9 @@ package chrome
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/pietjan/bender/internal/version"
 	"github.com/pietjan/loom/button"
 	"github.com/pietjan/loom/field"
 	"github.com/pietjan/loom/heading"
@@ -125,7 +127,30 @@ templ settings(state SettingsState) {
 				</div>
 			</form>
 		</section>
+		<footer class="flex justify-center border-t border-base-800/10 pt-4 dark:border-base-100/10">
+			@text.New(text.Small, text.Subtle) {
+				{ versionLine() }
+			}
+		</footer>
 	</div>
+}
+
+// versionLine renders the build stamp for the settings footer. The
+// commit is omitted when a git-describe version already embeds it (or
+// when nothing was stamped), and the build timestamp trims to its date.
+func versionLine() string {
+	v := version.Get()
+	line := "Bender " + v.Version
+	if len(v.Commit) > 7 {
+		v.Commit = v.Commit[:7]
+	}
+	if v.Commit != "none" && !strings.Contains(v.Version, v.Commit) {
+		line += " (" + v.Commit + ")"
+	}
+	if date, _, found := strings.Cut(v.Date, "T"); found {
+		line += ", built " + date
+	}
+	return line
 }
 
 func moveAttrs(item SettingsItem, delta int) []button.Option {
