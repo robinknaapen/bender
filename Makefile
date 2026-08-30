@@ -6,6 +6,17 @@ binary_name = bender
 # dependency trees. -modfile runs them from that module in place.
 tools = -modfile=tools/go.mod
 
+# Version info stamped into the binary from git; the release workflow
+# passes the same -X flags itself from the GitHub Actions environment.
+version_pkg = github.com/pietjan/bender/internal/version
+app_version = $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+commit = $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+build_date = $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+version_flags = -X $(version_pkg).version=$(app_version) \
+	-X $(version_pkg).commit=$(commit) \
+	-X $(version_pkg).date=$(build_date)
+
 # ==================================================================================== #
 # HELPERS
 # ==================================================================================== #
@@ -95,12 +106,12 @@ release: release/version no-dirty audit confirm
 ## build: build the Windows binary into bin/
 .PHONY: build
 build: ui
-	GOOS=windows GOARCH=amd64 go build -ldflags='-s -w -H=windowsgui' -o bin/$(binary_name).exe $(main_package_path)
+	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui $(version_flags)" -o bin/$(binary_name).exe $(main_package_path)
 
 ## build/debug: build with a console window attached (log output visible)
 .PHONY: build/debug
 build/debug: ui
-	GOOS=windows GOARCH=amd64 go build -o bin/$(binary_name)-debug.exe $(main_package_path)
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(version_flags)" -o bin/$(binary_name)-debug.exe $(main_package_path)
 
 # Launching a fresh exe straight off \\wsl$ hangs before main() (Defender
 # scans the unsigned binary over the network path, sometimes forever), so
@@ -125,7 +136,7 @@ wslg_env = DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/mnt/wslg/runtim
 ## build/linux: build the Linux binary into bin/
 .PHONY: build/linux
 build/linux: ui
-	GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o bin/$(binary_name) $(main_package_path)
+	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w $(version_flags)" -o bin/$(binary_name) $(main_package_path)
 
 ## run/linux: build and launch the Linux build (WSLg-aware) with DevTools
 .PHONY: run/linux

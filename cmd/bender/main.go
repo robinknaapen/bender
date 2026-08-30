@@ -17,6 +17,7 @@ import (
 	"github.com/pietjan/bender/internal/app"
 	"github.com/pietjan/bender/internal/appicon"
 	"github.com/pietjan/bender/internal/store"
+	"github.com/pietjan/bender/internal/version"
 )
 
 func main() {
@@ -33,7 +34,14 @@ func run() error {
 	debug := flag.Bool("debug", false, "enable DevTools in webviews")
 	selftest := flag.Bool("selftest", false, "drive the settings lifecycle and exit")
 	dbPath := flag.String("db", "", "database path (default: user config dir)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	v := version.Get()
+	if *showVersion {
+		fmt.Printf("bender %s (commit %s, built %s)\n", v.Version, v.Commit, v.Date)
+		return nil
+	}
 
 	// Browser profiles and logs are per-machine data, not roaming config.
 	cache, err := os.UserCacheDir()
@@ -50,6 +58,7 @@ func run() error {
 		log.SetOutput(io.MultiWriter(f, os.Stderr))
 		defer f.Close()
 	}
+	log.Printf("bender %s (commit %s, built %s)", v.Version, v.Commit, v.Date)
 
 	ctx := context.Background()
 	path := *dbPath

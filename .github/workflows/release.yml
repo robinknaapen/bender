@@ -21,8 +21,11 @@ jobs:
       # No cgo anywhere: both binaries cross-compile from one runner.
       # Generated assets (styles.css, templ, sqlc, winres .syso) are
       # committed, so plain builds suffice.
-      - run: GOOS=windows GOARCH=amd64 go build -ldflags='-s -w -H=windowsgui' -o dist/bender-windows-amd64.exe ./cmd/bender
-      - run: GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o dist/bender-linux-amd64 ./cmd/bender
+      - run: echo "version_flags=-X $PKG.version=$GITHUB_REF_NAME -X $PKG.commit=$GITHUB_SHA -X $PKG.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+        env:
+          PKG: github.com/pietjan/bender/internal/version
+      - run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui $version_flags" -o dist/bender-windows-amd64.exe ./cmd/bender
+      - run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w $version_flags" -o dist/bender-linux-amd64 ./cmd/bender
       - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
