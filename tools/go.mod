@@ -9,6 +9,7 @@ tool (
 	github.com/a-h/templ/cmd/templ
 	github.com/sqlc-dev/sqlc/cmd/sqlc
 	github.com/tc-hib/go-winres
+	golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
 	golang.org/x/vuln/cmd/govulncheck
 )
 

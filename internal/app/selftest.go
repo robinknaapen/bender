@@ -38,7 +38,6 @@ func (a *App) runSelftest(ctx context.Context) {
 		}},
 	}
 	for i, step := range steps {
-		step := step
 		delay := time.Duration(3+2*i) * time.Second
 		time.AfterFunc(delay, func() {
 			a.backend.Dispatch(func() {

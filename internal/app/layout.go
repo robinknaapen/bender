@@ -24,10 +24,7 @@ func ComputeLayout(w, h, dpi int, collapsed bool) Layout {
 	if collapsed {
 		dip = SidebarCollapsedDIP
 	}
-	sw := dip * dpi / 96
-	if sw > w {
-		sw = w
-	}
+	sw := min(dip*dpi/96, w)
 	return Layout{
 		Sidebar: spectacle.Rect{X: 0, Y: 0, W: sw, H: h},
 		Content: spectacle.Rect{X: sw, Y: 0, W: w - sw, H: h},
