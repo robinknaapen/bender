@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/a-h/templ v0.3.1020
 	github.com/pietjan/loom v0.0.0-20260830224512-a2c46f093c2a
-	github.com/pietjan/spectacle v0.0.0-20260830223625-4f079062b1cf
+	github.com/pietjan/spectacle v0.1.0
 	golang.org/x/image v0.45.0
 	modernc.org/sqlite v1.57.0
 )
