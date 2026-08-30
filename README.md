@@ -35,17 +35,18 @@ native-notification passthrough.
 Needs Go and the Tailwind standalone CLI (≥ 4.1) on PATH.
 
 ```sh
-make help      # list targets
-make ui        # regenerate templ/sqlc code and the embedded stylesheet
-make test      # unit tests (all app logic is platform-neutral and pure)
-make audit     # tidy-diff, verify, vet (linux+windows), govulncheck, cross-build
-make build       # bin/bender.exe (windowsgui)
-make run         # build and launch — works from WSL2 via interop
-make build/linux # bin/bender (GTK4/WebKitGTK)
-make run/linux   # build and launch — works under WSLg too
+make help          # list targets
+make ui            # regenerate templ/sqlc code and the embedded stylesheet
+make test          # unit tests (all app logic is platform-neutral and pure)
+make audit         # tidy-diff, verify, vet (linux+windows), govulncheck, cross-build
+make build         # both binaries into bin/
+make build/windows # bin/bender.exe (windowsgui)
+make run/windows   # build and launch — works from WSL2 via interop
+make build/linux   # bin/bender (GTK4/WebKitGTK)
+make run/linux     # build and launch — works under WSLg too
 ```
 
-`bin/bender-debug.exe` (`make build/debug`) keeps a console attached and
+`bin/bender-debug.exe` (`make build/windows/debug`) keeps a console attached and
 enables DevTools with `-debug`.
 
 Runtime files land in `%LOCALAPPDATA%\bender` (browser profiles, log)

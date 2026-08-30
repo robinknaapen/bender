@@ -103,14 +103,18 @@ release: release/version no-dirty audit confirm
 	git tag -a $(version) -m '$(version)'
 	git push origin $(version)
 
-## build: build the Windows binary into bin/
+## build: build the Windows and Linux binaries into bin/
 .PHONY: build
-build: ui
+build: build/windows build/linux
+
+## build/windows: build the Windows binary into bin/ (windowsgui)
+.PHONY: build/windows
+build/windows: ui
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui $(version_flags)" -o bin/$(binary_name).exe $(main_package_path)
 
-## build/debug: build with a console window attached (log output visible)
-.PHONY: build/debug
-build/debug: ui
+## build/windows/debug: build with a console window attached (log output visible)
+.PHONY: build/windows/debug
+build/windows/debug: ui
 	GOOS=windows GOARCH=amd64 go build -ldflags="$(version_flags)" -o bin/$(binary_name)-debug.exe $(main_package_path)
 
 # Launching a fresh exe straight off \\wsl$ hangs before main() (Defender
@@ -118,15 +122,15 @@ build/debug: ui
 # run copies it to the Windows temp dir first.
 win_temp = $(shell wslpath "$$(/mnt/c/Windows/System32/cmd.exe /c 'echo %TEMP%' 2>/dev/null | tr -d '\r')")
 
-## run: build and launch the app (works from WSL2 via Windows interop)
-.PHONY: run
-run: build
+## run/windows: build and launch the app (works from WSL2 via Windows interop)
+.PHONY: run/windows
+run/windows: build/windows
 	cp bin/$(binary_name).exe "$(win_temp)/$(binary_name).exe"
 	"$(win_temp)/$(binary_name).exe"
 
-## run/debug: launch a console build with DevTools enabled
-.PHONY: run/debug
-run/debug: build/debug
+## run/windows/debug: launch a console build with DevTools enabled
+.PHONY: run/windows/debug
+run/windows/debug: build/windows/debug
 	cp bin/$(binary_name)-debug.exe "$(win_temp)/$(binary_name)-debug.exe"
 	"$(win_temp)/$(binary_name)-debug.exe" -debug
 
