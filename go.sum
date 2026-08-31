@@ -26,8 +26,8 @@ github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOF
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/pietjan/loom v0.0.0-20260830224512-a2c46f093c2a h1:19+gulOuAeaoerMtQCA3SAWk/nyu9jEYIJtgMGaqj6Q=
 github.com/pietjan/loom v0.0.0-20260830224512-a2c46f093c2a/go.mod h1:wZx+ZB2sssi97225Q6aqsN6v0cb5b3Ch39ReE2VkhdE=
-github.com/pietjan/spectacle v0.1.0 h1:XpRtbCLhHU7cB7V1md40amdYsg6JCJ26rX5ZX/e01KM=
-github.com/pietjan/spectacle v0.1.0/go.mod h1:stdBDa1XKqmrGa27SpRuibvyOnd6Z6BcyQvw8eA576E=
+github.com/pietjan/spectacle v0.1.1 h1:3z6u0+2EPqL3TnpdGsksWYEN4qkPwlRzDlXZBZQzZ0E=
+github.com/pietjan/spectacle v0.1.1/go.mod h1:stdBDa1XKqmrGa27SpRuibvyOnd6Z6BcyQvw8eA576E=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
