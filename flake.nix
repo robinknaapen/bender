@@ -37,7 +37,6 @@
 
               nativeBuildInputs = [
                 pkgs.makeWrapper
-                pkgs.copyDesktopItems
               ];
 
               buildInputs = [
