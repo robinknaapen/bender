@@ -29,7 +29,6 @@
 
               src = ./.;
 
-              # ./cmd/bender contains package main
               subPackages = [
                 "cmd/bender"
               ];
@@ -62,7 +61,6 @@
               ];
 
               postInstall = ''
-                # Linux desktop icons
                 install -Dm644 ${./cmd/bender/winres/icon16.png} \
                   $out/share/icons/hicolor/16x16/apps/bender.png
 
