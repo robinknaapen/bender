@@ -1,2 +1,6 @@
 /bin/
 /internal/chrome/css/loom.css
+
+# nix
+result
+result-*
